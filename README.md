@@ -6,7 +6,7 @@ Colorful estimation quiz for Open Party Lab with numeric, ranking, and assignmen
 
 ## Status
 
-Alpha. The multi-category estimating loop is playable. Needs question pool growth, scoring review, and controller UX polish.
+Beta. The multi-category estimating loop is already good to play locally. Still needs question pool growth, scoring review, and controller UX polish before a stable release.
 
 ## Run Through Open Party Lab
 
