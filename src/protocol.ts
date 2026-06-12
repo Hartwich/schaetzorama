@@ -124,6 +124,7 @@ export interface SchaetzoramaStanding {
 export interface SchaetzoramaState extends BaseRoundState {
   stage: SchaetzoramaStage;
   roundContent: SchaetzoramaRoundContent;
+  usedQuestionIdsByCategory: Record<SchaetzoramaCategoryId, string[]>;
   answersByPlayerId: Record<string, SchaetzoramaSubmittedAnswerSet>;
   jokerPreviewByPlayerId: Record<string, SchaetzoramaJokerPreview>;
   jokerByPlayerId: Record<string, SchaetzoramaJokerSelection | null>;

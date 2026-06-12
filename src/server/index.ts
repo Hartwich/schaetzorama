@@ -26,31 +26,128 @@ import { schaetzoramaManifest } from "../manifest.js";
 import { schaetzoramaEnglishTextByQuestionId, schaetzoramaRounds } from "./schaetzoramaContent.js";
 import { buildSchaetzoramaResults, schaetzoramaCategoryIds } from "./schaetzoramaScoring.js";
 
-const answerDurationMs = 90_000;
 const copyDurationMs = 35_000;
 const roundsPerGame = 10;
 const startingInventory: SchaetzoramaJokerInventory = {
   copy: 2
 };
 
-function randomQuestionFor(categoryId: SchaetzoramaCategoryId): SchaetzoramaQuestion {
-  const questions = schaetzoramaRounds.map((round) => round.questions[categoryId]);
-  return questions[Math.floor(Math.random() * questions.length)] ?? questions[0];
+type UsedQuestionIdsByCategory = Record<SchaetzoramaCategoryId, string[]>;
+
+const excludedQuestionIds = new Set([
+  "chess-light-squares",
+  "note-values-long-short",
+  "bits-in-byte",
+  "half-byte-percent",
+  "data-units-small-large",
+  "dozen-count",
+  "weeks-in-year",
+  "quarter-century-percent",
+  "half-marathon-percent",
+  "h2o-hydrogen-atom-percent",
+  "cube-faces",
+  "right-angle-circle-percent",
+  "polygons-corners-small-large",
+  "prime-or-composite",
+  "platonic-solids-count",
+  "normal-distribution-one-sigma",
+  "growth-functions-rank",
+  "prime-composite-hard",
+  "ipv4-address-bits",
+  "byte-nibble-percent",
+  "algorithm-complexity-rank",
+  "english-vowels-alphabet-percent",
+  "earth-age-cretaceous-start-percent",
+  "golden-ratio-inverse-percent",
+  "kinsey-scale-heterosexual-end",
+  "si-prefix-larger-smaller",
+]);
+
+function createEmptyUsedQuestionIdsByCategory(): UsedQuestionIdsByCategory {
+  return {
+    number: [],
+    percent: [],
+    rank: [],
+    assign: []
+  };
+}
+
+const selectableQuestionsByCategory = Object.fromEntries(
+  schaetzoramaCategoryIds.map((categoryId) => [
+    categoryId,
+    schaetzoramaRounds
+      .map((round) => round.questions[categoryId])
+      .filter((question) => !excludedQuestionIds.has(question.id))
+  ])
+) as Record<SchaetzoramaCategoryId, SchaetzoramaQuestion[]>;
+
+function selectableQuestionsFor(categoryId: SchaetzoramaCategoryId): SchaetzoramaQuestion[] {
+  const questions = selectableQuestionsByCategory[categoryId];
+
+  if (questions.length < roundsPerGame) {
+    throw new Error(`Schaetzorama needs at least ${roundsPerGame} selectable ${categoryId} questions.`);
+  }
+
+  return questions;
+}
+
+function randomQuestionFor(categoryId: SchaetzoramaCategoryId, usedQuestionIds: string[]): SchaetzoramaQuestion {
+  const questions = selectableQuestionsFor(categoryId);
+  const unusedQuestions = questions.filter((question) => !usedQuestionIds.includes(question.id));
+  const pool = unusedQuestions.length > 0 ? unusedQuestions : questions;
+  const question = pool[Math.floor(Math.random() * pool.length)];
+
+  if (!question) {
+    throw new Error(`Schaetzorama has no selectable ${categoryId} questions.`);
+  }
+
+  return question;
 }
 
 function roundInGame(roundNumber: number): number {
   return ((roundNumber - 1) % roundsPerGame) + 1;
 }
 
-function questionRoundFor(roundNumber: number, language: SupportedLanguage): SchaetzoramaRoundContent {
+function usedQuestionIdsForRound(
+  previousState: SchaetzoramaState | null,
+  roundNumber: number
+): UsedQuestionIdsByCategory {
+  if (roundInGame(roundNumber) === 1) {
+    return createEmptyUsedQuestionIdsByCategory();
+  }
+
+  return previousState?.usedQuestionIdsByCategory ?? createEmptyUsedQuestionIdsByCategory();
+}
+
+function questionRoundFor(
+  roundNumber: number,
+  language: SupportedLanguage,
+  previousState: SchaetzoramaState | null
+): {
+  roundContent: SchaetzoramaRoundContent;
+  usedQuestionIdsByCategory: UsedQuestionIdsByCategory;
+} {
   const visibleRound = roundInGame(roundNumber);
+  const previousUsedQuestionIds = usedQuestionIdsForRound(previousState, roundNumber);
+  const questions = Object.fromEntries(
+    schaetzoramaCategoryIds.map((categoryId) => [
+      categoryId,
+      randomQuestionFor(categoryId, previousUsedQuestionIds[categoryId])
+    ])
+  ) as Record<SchaetzoramaCategoryId, SchaetzoramaQuestion>;
 
   return {
-    roundIndex: visibleRound,
-    roundLabel: language === "en" ? `Schaetzorama Round ${visibleRound}/10` : `Schaetzorama Runde ${visibleRound}/10`,
-    questions: Object.fromEntries(
-      schaetzoramaCategoryIds.map((categoryId) => [categoryId, randomQuestionFor(categoryId)])
-    ) as Record<SchaetzoramaCategoryId, SchaetzoramaQuestion>
+    roundContent: {
+      roundIndex: visibleRound,
+      roundLabel: language === "en" ? `Schaetzorama Round ${visibleRound}/10` : `Schaetzorama Runde ${visibleRound}/10`,
+      questions
+    },
+    usedQuestionIdsByCategory: Object.fromEntries(
+      schaetzoramaCategoryIds.map((categoryId) => [
+        categoryId,
+        [...previousUsedQuestionIds[categoryId], questions[categoryId].id].slice(-roundsPerGame)
+      ])
+    ) as UsedQuestionIdsByCategory
   };
 }
 
@@ -359,6 +456,7 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
   manifest: schaetzoramaManifest,
   createInitialState(context) {
     const previousState = previousSchaetzoramaState(context);
+    const questionRound = questionRoundFor(context.roundNumber, context.language, previousState);
 
     return {
       ...createBaseRoundState("round_intro", context.now, {
@@ -366,7 +464,8 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
         message: context.language === "en" ? "Schaetzorama is warming up the sliders." : "Schaetzorama faehrt die Regler hoch."
       }),
       stage: "answering",
-      roundContent: questionRoundFor(context.roundNumber, context.language),
+      roundContent: questionRound.roundContent,
+      usedQuestionIdsByCategory: questionRound.usedQuestionIdsByCategory,
       answersByPlayerId: {},
       jokerPreviewByPlayerId: {},
       jokerByPlayerId: {},
@@ -385,7 +484,7 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
         answersByPlayerId: {},
         jokerPreviewByPlayerId: {},
         jokerByPlayerId: {},
-        answerEndsAt: context.now + answerDurationMs,
+        answerEndsAt: null,
         jokerEndsAt: null,
         revealedAt: null,
         results: []
@@ -480,10 +579,6 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
   tick(state, _deltaMs, context) {
     if (state.phase !== "playing") {
       return state;
-    }
-
-    if (state.stage === "answering" && state.answerEndsAt !== null && context.now >= state.answerEndsAt) {
-      return enterCopyStage(state, context.players, context.now, context.language);
     }
 
     if (state.stage === "joker" && state.jokerEndsAt !== null && context.now >= state.jokerEndsAt) {
