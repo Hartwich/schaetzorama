@@ -10,6 +10,8 @@ import type {
   SchaetzoramaRankQuestion
 } from "../protocol.js";
 import { schaetzoramaManifest } from "../manifest.js";
+import { renderRoundScreens } from "./roundScreens.js";
+import { tokens } from "./platformTheme.js";
 
 interface HostClientLike {
   subscribe(callback: (state: HostAppStateLike) => void): () => void;
@@ -98,6 +100,12 @@ export class SchaetzoramaHostScene extends Phaser.Scene {
 
     this.time.removeAllEvents();
     this.tweens.killAll();
+
+    // Intro and result screens belong to this game, not the platform.
+    if (renderRoundScreens(this, state)) {
+      return;
+    }
+
     this.children.removeAll(true);
     this.render(state);
   }
@@ -215,7 +223,7 @@ export class SchaetzoramaHostScene extends Phaser.Scene {
     this.add.text(x + 26, y + 22, this.categoryLabel(question.categoryId), {
       fontFamily: "Arial Black, Arial, sans-serif",
       fontSize: "15px",
-      color: "#06111f"
+      color: tokens().color.background
     });
     this.add.text(x + 162, y + 19, question.title, {
       fontFamily: "Arial, sans-serif",
@@ -256,7 +264,7 @@ export class SchaetzoramaHostScene extends Phaser.Scene {
       this.add.text(itemX + 12, y + 13, entry.name, {
         fontFamily: "Arial, sans-serif",
         fontSize: "15px",
-        color: done ? "#04111f" : "#dbeafe"
+        color: done ? tokens().color.background : "#dbeafe"
       });
     });
   }
@@ -285,13 +293,13 @@ export class SchaetzoramaHostScene extends Phaser.Scene {
       this.add.text(x + 28, rowY + 10, `${index + 1}. ${standing.name}`, {
         fontFamily: "Arial Black, Arial, sans-serif",
         fontSize: "17px",
-        color: index === 0 ? "#04111f" : "#ffffff"
+        color: index === 0 ? tokens().color.background : "#ffffff"
       });
       const score = gameState.stage === "revealed" ? standing.projectedScore : standing.score;
       this.add.text(x + width - 92, rowY + 10, `${score} ${this.isEnglish() ? "pts" : "P"}`, {
         fontFamily: "Arial Black, Arial, sans-serif",
         fontSize: "17px",
-        color: index === 0 ? "#04111f" : "#facc15"
+        color: index === 0 ? tokens().color.background : "#facc15"
       });
     });
   }
@@ -394,7 +402,7 @@ export class SchaetzoramaHostScene extends Phaser.Scene {
       this.add.text(x + index * 96 + 13, y + 6, this.categoryLabel(categoryId), {
         fontFamily: "Arial Black, Arial, sans-serif",
         fontSize: "12px",
-        color: index <= activeIndex ? "#06111f" : "#dbeafe"
+        color: index <= activeIndex ? tokens().color.background : "#dbeafe"
       });
     });
   }
@@ -440,7 +448,7 @@ export class SchaetzoramaHostScene extends Phaser.Scene {
       container.add(this.add.text(width - 158, 15, jokerLabel, {
         fontFamily: "Arial Black, Arial, sans-serif",
         fontSize: "12px",
-        color: "#111827"
+        color: tokens().color.surface
       }));
     }
 
@@ -521,12 +529,12 @@ export class SchaetzoramaHostScene extends Phaser.Scene {
       this.add.text(84, y + 13, `${index + 1}. ${result.name}`, {
         fontFamily: "Arial Black, Arial, sans-serif",
         fontSize: "23px",
-        color: index === 0 ? "#04111f" : "#ffffff"
+        color: index === 0 ? tokens().color.background : "#ffffff"
       });
       this.add.text(340, y + 15, `${result.total} ${this.isEnglish() ? "round pts" : "Rundenpunkte"}`, {
         fontFamily: "Arial Black, Arial, sans-serif",
         fontSize: "21px",
-        color: index === 0 ? "#04111f" : "#fef3c7"
+        color: index === 0 ? tokens().color.background : "#fef3c7"
       });
       this.add.text(600, y + 17, this.compactScoreLine(result), {
         fontFamily: "Arial, sans-serif",

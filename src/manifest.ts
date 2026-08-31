@@ -18,7 +18,11 @@ export const schaetzoramaManifest = {
     lockedMs: 26_000,
     resultMs: 5_000,
     scoreboardMs: 5_000
-  }
+  },
+
+  ownsScreens: ["round_intro", "result"],
+  visual: { accent: "#c8873a", eyebrow: "Quiz" },
+  audio: { track: { profile: "arcade", bpm: 110, rootMidi: 55, masterGain: 0.13 } },
 } as const satisfies GameManifest;
 
 export const manifest = schaetzoramaManifest;
