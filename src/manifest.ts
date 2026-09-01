@@ -21,9 +21,10 @@ export const schaetzoramaManifest = {
   },
 
   ownsScreens: ["round_intro", "result"],
-  visual: { accent: "#c8873a", eyebrow: "Quiz" },
+  hostChrome: { joinOverlay: false, hud: false, roomCode: false, joinOverlayWhenFinished: false },
+  controllerChrome: { hideSubtitle: true },
+  visual: { accent: "#c8873a", icon: "question", eyebrow: "Quiz" },
   audio: { track: { profile: "arcade", bpm: 110, rootMidi: 55, masterGain: 0.13 } },
 } as const satisfies GameManifest;
 
 export const manifest = schaetzoramaManifest;
-

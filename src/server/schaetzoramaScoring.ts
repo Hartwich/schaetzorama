@@ -34,10 +34,14 @@ export function scoreSchaetzoramaAnswer(question: SchaetzoramaQuestion, answer: 
     if (diff === 0) {
       return 5;
     }
-    if (diff <= 2) {
+    const range = Math.max(1, question.max - question.min);
+    const closeThreshold = Math.max(2, Math.round(range * 0.05));
+    const broadThreshold = Math.max(5, Math.round(range * 0.12));
+
+    if (diff <= closeThreshold) {
       return 3;
     }
-    if (diff <= 5) {
+    if (diff <= broadThreshold) {
       return 1;
     }
     return 0;

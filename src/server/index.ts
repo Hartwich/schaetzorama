@@ -34,34 +34,46 @@ const startingInventory: SchaetzoramaJokerInventory = {
 
 type UsedQuestionIdsByCategory = Record<SchaetzoramaCategoryId, string[]>;
 
-const excludedQuestionIds = new Set([
-  "chess-light-squares",
-  "note-values-long-short",
-  "bits-in-byte",
-  "half-byte-percent",
-  "data-units-small-large",
-  "dozen-count",
-  "weeks-in-year",
-  "quarter-century-percent",
-  "half-marathon-percent",
-  "h2o-hydrogen-atom-percent",
-  "cube-faces",
-  "right-angle-circle-percent",
-  "polygons-corners-small-large",
-  "prime-or-composite",
-  "platonic-solids-count",
-  "normal-distribution-one-sigma",
-  "growth-functions-rank",
-  "prime-composite-hard",
-  "ipv4-address-bits",
-  "byte-nibble-percent",
-  "algorithm-complexity-rank",
-  "english-vowels-alphabet-percent",
-  "earth-age-cretaceous-start-percent",
-  "golden-ratio-inverse-percent",
-  "kinsey-scale-heterosexual-end",
-  "si-prefix-larger-smaller",
-]);
+// Kept as an auditable quarantine instead of deleting sourced content outright.
+const excludedQuestionReasons: Record<string, string> = {
+  "chess-light-squares": "fixed half of a two-colour board",
+  "note-values-long-short": "direct notation arithmetic",
+  "bits-in-byte": "definition recall",
+  "half-byte-percent": "direct arithmetic",
+  "data-units-small-large": "direct unit ordering",
+  "dozen-count": "definition recall",
+  "weeks-in-year": "calendar conversion",
+  "quarter-century-percent": "direct arithmetic",
+  "half-marathon-percent": "direct arithmetic",
+  "h2o-hydrogen-atom-percent": "direct formula arithmetic",
+  "cube-faces": "elementary definition",
+  "right-angle-circle-percent": "direct arithmetic",
+  "polygons-corners-small-large": "direct name-to-number ordering",
+  "prime-or-composite": "deterministic calculation",
+  "platonic-solids-count": "definition recall",
+  "normal-distribution-one-sigma": "formula recall",
+  "growth-functions-rank": "deterministic calculation",
+  "prime-composite-hard": "deterministic calculation",
+  "ipv4-address-bits": "definition recall",
+  "byte-nibble-percent": "direct arithmetic",
+  "algorithm-complexity-rank": "deterministic calculation",
+  "english-vowels-alphabet-percent": "direct arithmetic",
+  "earth-age-cretaceous-start-percent": "direct arithmetic",
+  "golden-ratio-inverse-percent": "direct arithmetic",
+  "kinsey-scale-heterosexual-end": "direct scale reading",
+  "si-prefix-larger-smaller": "direct unit ordering",
+  "si-prefixes": "direct unit ordering",
+  "piano-black-keys-octave": "direct keyboard counting",
+  "quarter-millennium-percent": "direct arithmetic",
+  "european-roulette-red-chance": "direct arithmetic",
+  "vinyl-lp-speed-approx": "rpm value placed in percent category",
+  "nobel-categories-first-awarded": "two categories tie in 1901",
+  "earth-land-surface-percent": "inverse duplicate of earth-water-surface",
+  "dry-air-nitrogen": "near-duplicate of dry-air-oxygen",
+  "writing-systems-chronology": "duplicate items and solution of writing-systems-age",
+  "composers-birth-chronology": "duplicate items and solution of classical-composers-chronology"
+};
+const excludedQuestionIds = new Set(Object.keys(excludedQuestionReasons));
 
 function createEmptyUsedQuestionIdsByCategory(): UsedQuestionIdsByCategory {
   return {
@@ -94,25 +106,24 @@ function selectableQuestionsFor(categoryId: SchaetzoramaCategoryId): Schaetzoram
 function randomQuestionFor(categoryId: SchaetzoramaCategoryId, usedQuestionIds: string[]): SchaetzoramaQuestion {
   const questions = selectableQuestionsFor(categoryId);
   const unusedQuestions = questions.filter((question) => !usedQuestionIds.includes(question.id));
-  const pool = unusedQuestions.length > 0 ? unusedQuestions : questions;
-  const question = pool[Math.floor(Math.random() * pool.length)];
+  const question = unusedQuestions[Math.floor(Math.random() * unusedQuestions.length)];
 
   if (!question) {
-    throw new Error(`Schaetzorama has no selectable ${categoryId} questions.`);
+    throw new Error(`Schaetzorama ran out of unique ${categoryId} questions in this session.`);
   }
 
   return question;
 }
 
-function roundInGame(roundNumber: number): number {
-  return ((roundNumber - 1) % roundsPerGame) + 1;
+function roundInGame(previousState: SchaetzoramaState | null): number {
+  return previousState ? Math.min(roundsPerGame, previousState.roundContent.roundIndex + 1) : 1;
 }
 
 function usedQuestionIdsForRound(
   previousState: SchaetzoramaState | null,
-  roundNumber: number
+  visibleRound: number
 ): UsedQuestionIdsByCategory {
-  if (roundInGame(roundNumber) === 1) {
+  if (visibleRound === 1) {
     return createEmptyUsedQuestionIdsByCategory();
   }
 
@@ -127,8 +138,8 @@ function questionRoundFor(
   roundContent: SchaetzoramaRoundContent;
   usedQuestionIdsByCategory: UsedQuestionIdsByCategory;
 } {
-  const visibleRound = roundInGame(roundNumber);
-  const previousUsedQuestionIds = usedQuestionIdsForRound(previousState, roundNumber);
+  const visibleRound = roundInGame(previousState);
+  const previousUsedQuestionIds = usedQuestionIdsForRound(previousState, visibleRound);
   const questions = Object.fromEntries(
     schaetzoramaCategoryIds.map((categoryId) => [
       categoryId,
@@ -154,9 +165,9 @@ function questionRoundFor(
 function createInventories(
   players: GamePlayerSummary[],
   previousState: SchaetzoramaState | null,
-  roundNumber: number
+  visibleRound: number
 ): Record<string, SchaetzoramaJokerInventory> {
-  const resetInventory = roundInGame(roundNumber) === 1;
+  const resetInventory = visibleRound === 1;
   const previousInventories = previousState?.jokerInventoryByPlayerId ?? {};
 
   return Object.fromEntries(
@@ -373,6 +384,9 @@ function sanitizeAnswers(answers: SchaetzoramaAnswerSet, questions: Record<strin
     }
 
     if ((question.kind === "number" || question.kind === "percent") && answer.kind === "number") {
+      if (!Number.isFinite(answer.value)) {
+        continue;
+      }
       nextAnswers[categoryId] = {
         kind: "number",
         value: Math.round(Math.max(question.min, Math.min(question.max, answer.value)))
@@ -384,9 +398,13 @@ function sanitizeAnswers(answers: SchaetzoramaAnswerSet, questions: Record<strin
       const allowedIds = new Set(question.items.map((item) => item.id));
       const order = answer.order.filter((itemId, index, list) => allowedIds.has(itemId) && list.indexOf(itemId) === index);
 
+      if (order.length !== question.items.length) {
+        continue;
+      }
+
       nextAnswers[categoryId] = {
         kind: "rank",
-        order: question.items.map((item) => item.id).sort((left, right) => order.indexOf(left) - order.indexOf(right))
+        order
       };
       continue;
     }
@@ -469,7 +487,7 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
       answersByPlayerId: {},
       jokerPreviewByPlayerId: {},
       jokerByPlayerId: {},
-      jokerInventoryByPlayerId: createInventories(context.players, previousState, context.roundNumber),
+      jokerInventoryByPlayerId: createInventories(context.players, previousState, questionRound.roundContent.roundIndex),
       answerEndsAt: null,
       jokerEndsAt: null,
       revealedAt: null,

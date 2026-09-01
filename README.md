@@ -6,7 +6,12 @@ Colorful estimation quiz for Open Party Lab with numeric, ranking, and assignmen
 
 ## Status
 
-Beta. The multi-category estimating loop is already good to play locally. Still needs question pool growth, scoring review, and controller UX polish before a stable release.
+Beta. The game uses a resolution-independent DOM host with animated reveals and
+a focused, one-question-at-a-time phone controller. A 10-round session contains
+40 distinct questions with no repeats and ends on an overall ranking. The sourced content contains 160 prompts;
+124 remain active after 36 arithmetic, definition-only, ambiguous, incorrectly
+typed, or semantically duplicated prompts were quarantined during review. The
+answer phase has no time limit.
 
 ## Run Through Open Party Lab
 

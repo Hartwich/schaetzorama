@@ -30,6 +30,7 @@ interface ReadyLayoutModel {
 
 interface SchaetzoramaLayoutModel {
   kind: "schaetzorama";
+  currentPlayerId: string;
   title: string;
   subtitle?: string;
   helperText?: string;
@@ -150,6 +151,7 @@ export function buildSchaetzoramaControllerModel(context: ControllerGameRenderCo
 
   return {
     kind: "schaetzorama",
+    currentPlayerId: playerId,
     title: "Schaetzorama",
     subtitle:
       stage === "revealed"
@@ -161,7 +163,9 @@ export function buildSchaetzoramaControllerModel(context: ControllerGameRenderCo
             : en ? "Set all sliders" : "Alle Regler einstellen",
     helperText:
       stage === "revealed"
-        ? en ? "The truth is out. Ready up when everyone is done watching." : "Die Wahrheit ist draussen. Gleich darfst du wieder bereit druecken."
+        ? guessState?.roundContent.roundIndex === 10
+          ? en ? "Session complete. The final standings are on the host." : "Die Sitzung ist beendet. Die Gesamtwertung steht auf dem Host."
+          : en ? "The truth is out. Ready up when everyone is done watching." : "Die Wahrheit ist draussen. Gleich darfst du wieder bereit druecken."
         : stage === "joker"
           ? guessState?.canSubmitJoker
             ? en ? "Choose one player and one task, compare both answers, then decide." : "Waehle Person und Aufgabe, vergleiche beide Antworten und entscheide dann."
@@ -170,7 +174,7 @@ export function buildSchaetzoramaControllerModel(context: ControllerGameRenderCo
             ? en ? `Your panel is locked. Waiting for ${waitingCount}.` : `Dein Pult ist verriegelt. Warte noch auf ${waitingCount}.`
             : en ? "Estimate, sort, assign. Copying opens after everyone locks in." : "Schaetzen, sortieren, zuordnen. Abschreiben oeffnet nach dem Einloggen.",
     disabled: phase !== "playing",
-    ready: buildReadyModel(context),
+    ready: guessState?.roundContent.roundIndex === 10 ? undefined : buildReadyModel(context),
     stage,
     resetKey: `${state.game?.roundNumber ?? 0}:${stage}:${guessState?.roundContent.roundIndex ?? 0}`,
     roundContent: guessState?.roundContent,

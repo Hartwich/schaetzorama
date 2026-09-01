@@ -381,9 +381,9 @@ export const schaetzoramaRounds: SchaetzoramaRoundContent[] = [
         prompt: "Ordne diese modernen Olympischen Sommerspiele chronologisch, frueh nach spaet.",
         directionLabel: "frueh nach spaet",
         items: [
-          { id: "st-louis", label: "St. Louis" },
-          { id: "athens", label: "Athen" },
-          { id: "paris", label: "Paris" }
+          { id: "st-louis", label: "St. Louis 1904" },
+          { id: "athens", label: "Athen 1896" },
+          { id: "paris", label: "Paris 1900" }
         ],
         answerOrder: ["athens", "paris", "st-louis"],
         source: {
@@ -3532,9 +3532,9 @@ export const schaetzoramaEnglishTextByQuestionId: Record<string, SchaetzoramaEng
     prompt: "Put these modern Summer Olympic Games in chronological order, early to late.",
     directionLabel: "early to late",
     itemLabels: {
-      "st-louis": "St. Louis",
-      athens: "Athens",
-      paris: "Paris"
+      "st-louis": "St. Louis 1904",
+      athens: "Athens 1896",
+      paris: "Paris 1900"
     }
   },
   "summer-winter-sports": {
