@@ -15,19 +15,19 @@ export const schaetzoramaManifest = {
   phaseDurations: {
     roundIntroMs: 1_500,
     countdownMs: 2_000,
-    lockedMs: 26_000,
-    resultMs: 30_000,
+    lockedMs: 38_000,
+    resultMs: 38_000,
     scoreboardMs: 5_000
   },
 
   ownsScreens: ["round_intro", "result"],
   hostChrome: { joinOverlay: false, hud: false, roomCode: false, joinOverlayWhenFinished: false },
-  controllerChrome: { hideSubtitle: true },
+  controllerChrome: { hideSubtitle: true, hideScore: true },
   visual: { accent: "#c8873a", icon: "question", eyebrow: "Quiz" },
   audio: {
-    track: { profile: "calmFocus", bpm: 76, rootMidi: 48, masterGain: 0.19, crossfadeSeconds: 3.2 },
+    track: { profile: "calmFocus", bpm: 100, rootMidi: 48, masterGain: 0.19, crossfadeSeconds: 3.2 },
     trackByStage: {
-      revealed: { profile: "calmReveal", bpm: 80, rootMidi: 48, masterGain: 0.18, crossfadeSeconds: 3.2 }
+      revealed: { profile: "calmReveal", bpm: 104, rootMidi: 48, masterGain: 0.075, crossfadeSeconds: 3.2 }
     }
   },
 } as const satisfies GameManifest;

@@ -1,4 +1,4 @@
-import type { SchaetzoramaAnswer, SchaetzoramaPublicQuestion, SchaetzoramaPublicState } from "../protocol.js";
+import type { SchaetzoramaAnswer, SchaetzoramaPublicQuestion, SchaetzoramaPublicState, SchaetzoramaStanding } from "../protocol.js";
 
 export const revealCategories = ["number", "percent", "rank", "assign"] as const;
 export const itemStartMs = 650;
@@ -20,7 +20,20 @@ export function revealPosition(state: SchaetzoramaPublicState, now = Date.now())
     if (elapsed < duration) return { step, elapsed, remaining: duration - elapsed };
     elapsed -= duration;
   }
-  return { step: revealCategories.length, elapsed, remaining: 0 };
+  if (elapsed < 4000) return { step: revealCategories.length, elapsed, remaining: 4000 - elapsed };
+  return { step: revealCategories.length + 1, elapsed: elapsed - 4000, remaining: 0 };
+}
+
+export function standingMovements(standings: SchaetzoramaStanding[]) {
+  const before = [...standings].sort((a, b) => (b.projectedScore - b.roundScore) - (a.projectedScore - a.roundScore) || a.playerId.localeCompare(b.playerId));
+  const after = [...standings].sort((a, b) => b.projectedScore - a.projectedScore || a.playerId.localeCompare(b.playerId));
+  return after.map((standing, index) => {
+    const previousScore = standing.projectedScore - standing.roundScore;
+    const previousRank = 1 + before.filter((other) => other.projectedScore - other.roundScore > previousScore).length;
+    const rank = 1 + after.filter((other) => other.projectedScore > standing.projectedScore).length;
+    return { ...standing, previousScore, previousRank, rank, shift: previousRank - rank,
+      fromRow: before.findIndex((other) => other.playerId === standing.playerId) - index };
+  });
 }
 
 export function renderVisualSolution(question: SchaetzoramaPublicQuestion, answer: SchaetzoramaAnswer | undefined, language: "de" | "en", escape: (value: unknown) => string): string | null {

@@ -112,7 +112,33 @@ function randomQuestionFor(categoryId: SchaetzoramaCategoryId, usedQuestionIds: 
     throw new Error(`Schaetzorama ran out of unique ${categoryId} questions in this session.`);
   }
 
+  if (question.kind === "rank") {
+    const items = shuffled(question.items);
+    if (items.every((item, index) => item.id === question.answerOrder[index]) && items.length > 1) {
+      [items[0], items[1]] = [items[1], items[0]];
+    }
+    return { ...question, items };
+  }
+  if (question.kind === "assign") {
+    const terms = shuffled(question.terms);
+    const zoneOrder = { left: 0, both: 1, right: 2 };
+    const grouped = terms.every((term, index) => index === 0 || zoneOrder[question.answers[terms[index - 1].id]] <= zoneOrder[question.answers[term.id]]);
+    if (grouped) {
+      const other = terms.findIndex((term) => question.answers[term.id] !== question.answers[terms[0].id]);
+      if (other > 0) [terms[0], terms[other]] = [terms[other], terms[0]];
+    }
+    return { ...question, terms };
+  }
   return question;
+}
+
+function shuffled<T>(values: readonly T[]): T[] {
+  const result = [...values];
+  for (let index = result.length - 1; index > 0; index--) {
+    const target = Math.floor(Math.random() * (index + 1));
+    [result[index], result[target]] = [result[target], result[index]];
+  }
+  return result;
 }
 
 function roundInGame(previousState: SchaetzoramaState | null): number {
@@ -625,6 +651,9 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
 
     return {
       ...publicState,
+      results: [],
+      solutions: {},
+      standings: [],
       playerId,
       ownAnswers: state.answersByPlayerId[playerId]?.answers ?? {},
       ownJokerPreview: preview ?? null,

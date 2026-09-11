@@ -84,6 +84,12 @@ const css = `
 @keyframes sz-check-in{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
 @keyframes sz-points-pop{0%{opacity:0;transform:translateY(10px) scale(.8)}65%{opacity:1;transform:translateY(-3px) scale(1.12)}100%{opacity:1;transform:none}}
 @media(max-height:680px){.sz-zone-rail,.sz-zone-item{min-height:42px}.sz-zone-item{font-size:13px;padding:4px}.sz-reveal__eyebrow{font-size:16px}.sz-reveal__question small{margin-top:12px}}
+.sz-movement-board{display:grid;gap:8px;padding:10px 32px 24px}
+.sz-movement-row{height:56px;box-sizing:border-box;display:grid;grid-template-columns:42px 8px minmax(0,1fr) 60px 88px 100px;align-items:center;gap:14px;padding:8px 16px;border:1px solid var(--line);border-radius:7px;background:var(--surface);animation:sz-standing-move 1200ms cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(1200ms - var(--reveal-age,0ms))}
+.sz-movement-row>i{height:30px;background:var(--player);border-radius:3px}.sz-movement-row>strong{overflow-wrap:anywhere;font-size:19px}.sz-movement-place,.sz-movement-total{display:grid;font-size:24px}.sz-movement-place>b,.sz-movement-total>b{grid-area:1/1}.sz-movement-total{text-align:right}.sz-movement-gain{font-size:20px;color:var(--sz-number);text-align:right}.sz-movement-shift{font-size:18px;text-align:center}
+.sz-before{animation:sz-old-standing 1ms both;animation-delay:calc(1200ms - var(--reveal-age,0ms))}.sz-after{animation:sz-new-standing 1ms both;animation-delay:calc(1200ms - var(--reveal-age,0ms))}
+@keyframes sz-standing-move{from{transform:translateY(calc(var(--from-row) * 64px))}to{transform:translateY(0)}}
+@keyframes sz-old-standing{from{opacity:1}to{opacity:0}}@keyframes sz-new-standing{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.sz-host *{animation-duration:.01ms!important;animation-delay:0ms!important}}
 `;
 

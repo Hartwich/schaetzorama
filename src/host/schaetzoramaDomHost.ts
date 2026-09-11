@@ -7,7 +7,7 @@ import type {
 } from "../protocol.js";
 import { installSchaetzoramaHostStyles } from "./schaetzoramaHostStyles.js";
 import { createSchaetzoramaSounds } from "./schaetzoramaSounds.js";
-import { itemMoveMs, itemStaggerMs, itemStartMs, renderVisualSolution, revealPosition, scoreStartMs, solutionItemCount } from "./schaetzoramaReveal.js";
+import { itemMoveMs, itemStaggerMs, itemStartMs, renderVisualSolution, revealPosition, scoreStartMs, solutionItemCount, standingMovements } from "./schaetzoramaReveal.js";
 
 interface HostAppStateLike {
   game?: { phase?: string; state?: unknown } | null;
@@ -97,7 +97,8 @@ export function mountSchaetzoramaHost(rootInput: unknown, source: HostGameStateS
           schedule(0, "reveal");
           for (let index = 0; index < solutionItemCount(question); index++) schedule(itemStartMs + index * itemStaggerMs + itemMoveMs, "land", index);
           gameState.results.forEach((_, index) => schedule(scoreStartMs(question) + index * 110, "points", index));
-        } else schedule(0, "final");
+        } else if (step === categories.length) schedule(0, "final");
+        else schedule(1200, "points");
       }
       if (remaining > 0) {
         revealTimer = window.setTimeout(() => render(source.getState()), Math.max(30, remaining));
@@ -191,7 +192,8 @@ function renderStandings(gameState: SchaetzoramaPublicState, language: "de" | "e
 
 function renderReveal(state: HostAppStateLike, gameState: SchaetzoramaPublicState, language: "de" | "en"): string {
   const { step } = revealPosition(gameState);
-  if (step >= categories.length) return renderFinal(state, gameState, language);
+  if (step > categories.length) return renderFinal(state, gameState, language);
+  if (step >= categories.length) return renderStandingsMovement(state, gameState, language);
   const category = categories[step];
   const text = labels[language];
   const question = gameState.roundContent.questions[category];
@@ -222,6 +224,24 @@ function renderFinal(state: HostAppStateLike, gameState: SchaetzoramaPublicState
     ${renderHeader(state, gameState, text.finalTitle, text.roundPoints, language)}
     <section class="sz-final__title"><p>${text.finalSubtitle}</p></section>
     <section class="sz-final-board">${sorted.map((result, index) => `<article class="sz-final-row ${index === 0 ? "is-winner" : ""}" style="--player:${safeColor(result.color)};--row-delay:${index * 90}ms"><span class="sz-final-row__place">${index + 1}</span><i></i><strong>${escapeHtml(result.name)}</strong><div class="sz-final-row__breakdown">${categories.map((category) => `<span class="is-${category}">${categoryGlyph(category)} +${result.categoryScores[category]}</span>`).join("")}</div><b>${result.total}<small>${text.points}</small></b></article>`).join("")}</section>
+  </main>`;
+}
+
+function renderStandingsMovement(state: HostAppStateLike, gameState: SchaetzoramaPublicState, language: "de" | "en"): string {
+  const en = language === "en";
+  const final = gameState.roundContent.roundIndex === 10;
+  const title = final ? labels[language].sessionTitle : en ? "Overall standings" : "Gesamtwertung";
+  const entries = standingMovements(gameState.standings);
+  return `<main class="sz-host sz-final sz-movement">
+    ${renderHeader(state, gameState, title, labels[language].totalPoints, language)}
+    <section class="sz-final__title"><p>${en ? "Standings after this round" : "Der Zwischenstand nach dieser Runde"}</p></section>
+    <section class="sz-movement-board">${entries.map((entry) => `<article class="sz-movement-row" style="--player:${safeColor(entry.color)};--from-row:${entry.fromRow}">
+      <span class="sz-movement-place"><b class="sz-before">${entry.previousRank}</b><b class="sz-after">${entry.rank}</b></span>
+      <i></i><strong>${escapeHtml(entry.name)}</strong>
+      <span class="sz-movement-shift sz-after">${entry.shift > 0 ? `↑ ${entry.shift}` : entry.shift < 0 ? `↓ ${-entry.shift}` : "="}</span>
+      <span class="sz-movement-gain">+${entry.roundScore}</span>
+      <span class="sz-movement-total"><b class="sz-before">${entry.previousScore}</b><b class="sz-after">${entry.projectedScore}</b></span>
+    </article>`).join("")}</section>
   </main>`;
 }
 
