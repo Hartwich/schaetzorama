@@ -16,7 +16,7 @@ export const schaetzoramaManifest = {
     roundIntroMs: 1_500,
     countdownMs: 2_000,
     lockedMs: 26_000,
-    resultMs: 5_000,
+    resultMs: 30_000,
     scoreboardMs: 5_000
   },
 
@@ -24,7 +24,12 @@ export const schaetzoramaManifest = {
   hostChrome: { joinOverlay: false, hud: false, roomCode: false, joinOverlayWhenFinished: false },
   controllerChrome: { hideSubtitle: true },
   visual: { accent: "#c8873a", icon: "question", eyebrow: "Quiz" },
-  audio: { track: { profile: "arcade", bpm: 110, rootMidi: 55, masterGain: 0.13 } },
+  audio: {
+    track: { profile: "calmFocus", bpm: 76, rootMidi: 48, masterGain: 0.19, crossfadeSeconds: 3.2 },
+    trackByStage: {
+      revealed: { profile: "calmReveal", bpm: 80, rootMidi: 48, masterGain: 0.18, crossfadeSeconds: 3.2 }
+    }
+  },
 } as const satisfies GameManifest;
 
 export const manifest = schaetzoramaManifest;

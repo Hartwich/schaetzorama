@@ -6,6 +6,8 @@ import type {
   SchaetzoramaPublicState
 } from "../protocol.js";
 import { installSchaetzoramaHostStyles } from "./schaetzoramaHostStyles.js";
+import { createSchaetzoramaSounds } from "./schaetzoramaSounds.js";
+import { itemMoveMs, itemStaggerMs, itemStartMs, renderVisualSolution, revealPosition, scoreStartMs, solutionItemCount } from "./schaetzoramaReveal.js";
 
 interface HostAppStateLike {
   game?: { phase?: string; state?: unknown } | null;
@@ -13,7 +15,6 @@ interface HostAppStateLike {
 }
 
 const categories: SchaetzoramaCategoryId[] = ["number", "percent", "rank", "assign"];
-const revealStepMs = 4_600;
 
 const labels = {
   de: {
@@ -43,6 +44,20 @@ export function mountSchaetzoramaHost(rootInput: unknown, source: HostGameStateS
   let revealTimer: number | undefined;
   let ticker: number | undefined;
   let lastMarkup = "";
+  const sounds = createSchaetzoramaSounds();
+  let cueKey = "";
+  let cueTimers: number[] = [];
+  const syncSoundButton = () => {
+    const button = root.querySelector<HTMLButtonElement>("[data-sz-sound]");
+    if (!button) return;
+    button.textContent = sounds.muted ? "♪ ×" : "♪";
+    button.setAttribute("aria-pressed", String(!sounds.muted));
+  };
+  const onClick = (event: Event) => {
+    if ((event.target as Element).closest("[data-sz-sound]")) { sounds.toggle(); syncSoundButton(); }
+  };
+  root.addEventListener("click", onClick);
+  const clearCues = () => { cueTimers.forEach(window.clearTimeout); cueTimers = []; };
 
   const clearTimers = () => {
     if (revealTimer !== undefined) window.clearTimeout(revealTimer);
@@ -61,16 +76,37 @@ export function mountSchaetzoramaHost(rootInput: unknown, source: HostGameStateS
     if (markup !== lastMarkup) {
       root.innerHTML = markup;
       lastMarkup = markup;
+      syncSoundButton();
+      if (gameState?.stage === "revealed") {
+        const position = revealPosition(gameState);
+        root.style.setProperty("--reveal-age", `${position.elapsed}ms`);
+      }
     }
 
     if (gameState?.stage === "revealed" && gameState.revealedAt) {
-      const elapsed = Math.max(0, Date.now() - gameState.revealedAt);
-      const nextStep = Math.floor(elapsed / revealStepMs) + 1;
-      if (nextStep <= categories.length) {
-        revealTimer = window.setTimeout(() => render(source.getState()), Math.max(80, nextStep * revealStepMs - elapsed));
+      const { step, elapsed, remaining } = revealPosition(gameState);
+      const nextCueKey = `${gameState.revealedAt}:${step}`;
+      if (cueKey !== nextCueKey) {
+        clearCues(); cueKey = nextCueKey;
+        const schedule = (at: number, kind: Parameters<typeof sounds.play>[0], index = 0) => {
+          if (at < elapsed - 150) return;
+          cueTimers.push(window.setTimeout(() => sounds.play(kind, index), Math.max(0, at - elapsed)));
+        };
+        if (step < categories.length) {
+          const question = gameState.roundContent.questions[categories[step]];
+          schedule(0, "reveal");
+          for (let index = 0; index < solutionItemCount(question); index++) schedule(itemStartMs + index * itemStaggerMs + itemMoveMs, "land", index);
+          gameState.results.forEach((_, index) => schedule(scoreStartMs(question) + index * 110, "points", index));
+        } else schedule(0, "final");
+      }
+      if (remaining > 0) {
+        revealTimer = window.setTimeout(() => render(source.getState()), Math.max(30, remaining));
       }
     } else if (gameState?.stage === "joker" && gameState.jokerEndsAt) {
+      clearCues(); cueKey = "";
       ticker = window.setTimeout(() => render(source.getState()), 1_000);
+    } else {
+      clearCues(); cueKey = "";
     }
   };
 
@@ -80,6 +116,10 @@ export function mountSchaetzoramaHost(rootInput: unknown, source: HostGameStateS
 
   return () => {
     clearTimers();
+    clearCues();
+    sounds.dispose();
+    root.removeEventListener("click", onClick);
+    root.style.removeProperty("--reveal-age");
     unsubscribe();
     root.className = "";
     root.replaceChildren();
@@ -132,7 +172,7 @@ function renderHeader(state: HostAppStateLike, gameState: SchaetzoramaPublicStat
   return `<header class="sz-host-header">
     <div class="sz-brand"><strong>Schaetzorama</strong><span>${text.brandLine}</span></div>
     <div class="sz-round"><span>${escapeHtml(gameState.roundContent.roundLabel)}</span><strong>${escapeHtml(stage)}</strong></div>
-    <div class="sz-live-meta"><span>${escapeHtml(meta)}</span><b>${text.room} ${escapeHtml(state.room?.code ?? "----")}</b></div>
+    <div class="sz-live-meta"><div class="sz-meta-actions"><span>${escapeHtml(meta)}</span><button type="button" data-sz-sound aria-label="${language === "en" ? "Sound effects" : "Soundeffekte"}" title="${language === "en" ? "Sound effects on/off" : "Soundeffekte an/aus"}" aria-pressed="true">♪</button></div><b>${text.room} ${escapeHtml(state.room?.code ?? "----")}</b></div>
   </header>`;
 }
 
@@ -150,8 +190,7 @@ function renderStandings(gameState: SchaetzoramaPublicState, language: "de" | "e
 }
 
 function renderReveal(state: HostAppStateLike, gameState: SchaetzoramaPublicState, language: "de" | "en"): string {
-  const elapsed = Math.max(0, Date.now() - (gameState.revealedAt ?? Date.now()));
-  const step = Math.min(categories.length, Math.floor(elapsed / revealStepMs));
+  const { step } = revealPosition(gameState);
   if (step >= categories.length) return renderFinal(state, gameState, language);
   const category = categories[step];
   const text = labels[language];
@@ -161,8 +200,8 @@ function renderReveal(state: HostAppStateLike, gameState: SchaetzoramaPublicStat
   return `<main class="sz-host sz-reveal is-${category}">
     ${renderHeader(state, gameState, `${text.categories[category]} · ${step + 1}/4`, text.correct, language)}
     <section class="sz-reveal__main">
-      <div class="sz-reveal__question"><div class="sz-reveal__eyebrow"><span>${categoryGlyph(category)}</span>${escapeHtml(question.prompt)}</div><p>${text.correct}</p><h1>${escapeHtml(formatAnswer(question, solution, language, true))}</h1><small>${text.source}: ${escapeHtml(question.source.label)}</small></div>
-      <div class="sz-answer-board"><p>${text.closest}</p>${entries.map((entry, index) => `<div class="sz-answer-row" style="--player:${safeColor(entry.result.color)};--row-delay:${120 + index * 110}ms"><span class="sz-answer-row__rank">${index + 1}</span><strong>${escapeHtml(entry.result.name)}</strong><span>${escapeHtml(formatAnswer(question, entry.answer, language, false))}</span>${entry.result.joker?.categoryId === category ? `<em>${text.copied}</em>` : ""}<b>+${entry.score}</b></div>`).join("")}</div>
+      <div class="sz-reveal__question"><div class="sz-reveal__eyebrow"><span>${categoryGlyph(category)}</span>${escapeHtml(question.prompt)}</div><p>${text.correct}</p>${renderVisualSolution(question, solution, language, escapeHtml) ?? `<h1>${escapeHtml(formatAnswer(question, solution, language, true))}</h1>`}<small>${text.source}: ${escapeHtml(question.source.label)}</small></div>
+      <div class="sz-answer-board"><p>${text.closest}</p>${entries.map((entry, index) => `<div class="sz-answer-row" style="--player:${safeColor(entry.result.color)};--row-delay:${scoreStartMs(question) + index * 110}ms"><span class="sz-answer-row__rank">${index + 1}</span><strong>${escapeHtml(entry.result.name)}</strong><span>${escapeHtml(formatAnswer(question, entry.answer, language, false))}</span><em${entry.result.joker?.categoryId === category ? "" : " hidden"}>${text.copied}</em><b>+${entry.score}</b></div>`).join("")}</div>
     </section>
     <nav class="sz-reveal-steps">${categories.map((entry, index) => `<i class="is-${entry} ${index <= step ? "is-active" : ""}"></i>`).join("")}</nav>
   </main>`;

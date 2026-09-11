@@ -66,6 +66,24 @@ const css = `
 @keyframes sz-row-in{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
 @media (max-width:1040px){.sz-host-header{grid-template-columns:1fr auto}.sz-round{display:none}.sz-play{grid-template-columns:minmax(0,1fr) 260px}.sz-question h2{font-size:20px}.sz-reveal__main{grid-template-columns:.8fr 1.2fr;padding-inline:22px}.sz-reveal__question h1{font-size:40px}.sz-final-row{grid-template-columns:38px 8px minmax(100px,.6fr) 1.4fr 100px}}
 @media (max-height:680px){.sz-host-header{height:78px;padding-block:12px}.sz-play{grid-template-rows:78px minmax(0,1fr)}.sz-reveal,.sz-final{padding-top:78px}.sz-question-grid{padding-block:12px}.sz-question{padding:15px}.sz-question h2{font-size:19px}.sz-final__title{padding-block:12px 6px}.sz-final-board{gap:6px;padding-top:5px}.sz-final-row{min-height:48px;padding-block:7px}.sz-final-row.is-winner{min-height:58px}}
+.sz-meta-actions{display:flex;align-items:center;gap:9px}.sz-meta-actions button{width:38px;height:38px;padding:0;border:1px solid var(--line-strong);border-radius:7px;background:var(--surface);color:var(--ink);font-size:21px;cursor:pointer}.sz-meta-actions button[aria-pressed=false]{color:var(--muted)}
+.sz-reveal.is-assign .sz-reveal__main,.sz-reveal.is-rank .sz-reveal__main{grid-template-columns:minmax(0,1.2fr) minmax(360px,.8fr)}
+.sz-reveal.is-assign .sz-reveal__question,.sz-reveal.is-rank .sz-reveal__question{padding-right:0;min-width:0}
+.sz-reveal.is-assign .sz-reveal__question>p,.sz-reveal.is-rank .sz-reveal__question>p{margin-top:20px;margin-bottom:12px}
+.sz-order-solution>p{color:var(--muted);font-size:14px;margin-bottom:10px}.sz-order-list{display:grid;gap:8px}
+.sz-order-item{height:52px;position:relative;display:grid;grid-template-columns:32px minmax(0,1fr) 24px;align-items:center;gap:10px;padding:7px 12px;border:1px solid var(--line-strong);border-radius:7px;background:var(--surface);animation:sz-sort-in 700ms cubic-bezier(.2,.75,.2,1) both;animation-delay:calc(var(--item-delay) - var(--reveal-age,0ms))}
+.sz-order-item>b{color:var(--cat);font-size:22px}.sz-order-item>strong{font-size:16px;overflow-wrap:anywhere}.sz-order-item>span{color:var(--cat);animation:sz-check-in 250ms both;animation-delay:calc(var(--item-delay) + 600ms - var(--reveal-age,0ms))}
+.sz-zone-labels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;text-align:center;margin-bottom:8px}.sz-zone-labels>strong{padding:8px 4px;border-bottom:3px solid var(--cat);font-size:15px;overflow-wrap:anywhere}
+.sz-zone-rail{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));min-height:54px;margin-bottom:7px;background:linear-gradient(90deg,transparent 33%,var(--line) 33%,var(--line) 33.4%,transparent 33.4%,transparent 66.3%,var(--line) 66.3%,var(--line) 66.7%,transparent 66.7%);border-bottom:1px dashed var(--line)}
+.sz-zone-item{grid-column:1;display:flex;gap:6px;align-items:center;justify-content:center;min-width:0;min-height:54px;padding:7px;border:2px solid var(--cat);border-radius:7px;background:var(--surface);text-align:center;font-size:15px;overflow-wrap:anywhere;animation:sz-zone-slide 700ms cubic-bezier(.2,.75,.2,1) both;animation-delay:calc(var(--item-delay) - var(--reveal-age,0ms))}.sz-zone-item>span{color:var(--cat);animation:sz-check-in 250ms both;animation-delay:calc(var(--item-delay) + 600ms - var(--reveal-age,0ms))}
+.sz-reveal .sz-answer-row{grid-template-columns:24px minmax(70px,.8fr) minmax(80px,1fr) auto 46px;gap:7px;padding:10px;animation-delay:calc(var(--row-delay) - var(--reveal-age,0ms))}
+.sz-reveal .sz-answer-row>b{animation:sz-points-pop 480ms both;animation-delay:calc(var(--row-delay) + 180ms - var(--reveal-age,0ms))}.sz-answer-row em[hidden]{display:none}
+.sz-reveal__question h1{animation-delay:calc(650ms - var(--reveal-age,0ms))}
+@keyframes sz-sort-in{from{transform:translateY(calc(var(--from-row) * 60px));border-color:var(--line)}to{transform:translateY(0);border-color:var(--cat)}}
+@keyframes sz-zone-slide{from{transform:translateX(100%)}to{transform:translateX(calc(var(--zone) * 100%))}}
+@keyframes sz-check-in{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+@keyframes sz-points-pop{0%{opacity:0;transform:translateY(10px) scale(.8)}65%{opacity:1;transform:translateY(-3px) scale(1.12)}100%{opacity:1;transform:none}}
+@media(max-height:680px){.sz-zone-rail,.sz-zone-item{min-height:42px}.sz-zone-item{font-size:13px;padding:4px}.sz-reveal__eyebrow{font-size:16px}.sz-reveal__question small{margin-top:12px}}
 @media (prefers-reduced-motion:reduce){.sz-host *{animation-duration:.01ms!important;animation-delay:0ms!important}}
 `;
 

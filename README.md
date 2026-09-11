@@ -11,7 +11,8 @@ a focused, one-question-at-a-time phone controller. A 10-round session contains
 40 distinct questions with no repeats and ends on an overall ranking. The sourced content contains 160 prompts;
 124 remain active after 36 arithmetic, definition-only, ambiguous, incorrectly
 typed, or semantically duplicated prompts were quarantined during review. The
-answer phase has no time limit.
+answer phase has no time limit. Calm selection music and a separate reveal track
+crossfade smoothly, with original host cues for each solution and score.
 
 ## Run Through Open Party Lab
 
