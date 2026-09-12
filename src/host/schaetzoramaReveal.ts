@@ -16,12 +16,16 @@ export function scoreStartMs(question: SchaetzoramaPublicQuestion): number {
 export function revealPosition(state: SchaetzoramaPublicState, now = Date.now()) {
   let elapsed = Math.max(0, now - (state.revealedAt ?? now));
   for (let step = 0; step < revealCategories.length; step++) {
-    const duration = scoreStartMs(state.roundContent.questions[revealCategories[step]]) + 2600;
+    const duration = categoryRevealDurationMs(state.roundContent.questions[revealCategories[step]]);
     if (elapsed < duration) return { step, elapsed, remaining: duration - elapsed };
     elapsed -= duration;
   }
   if (elapsed < 4000) return { step: revealCategories.length, elapsed, remaining: 4000 - elapsed };
   return { step: revealCategories.length + 1, elapsed: elapsed - 4000, remaining: 0 };
+}
+
+export function categoryRevealDurationMs(question: SchaetzoramaPublicQuestion): number {
+  return scoreStartMs(question) + (question.kind === "rank" || question.kind === "assign" ? 6500 : 4000);
 }
 
 export function standingMovements(standings: SchaetzoramaStanding[]) {

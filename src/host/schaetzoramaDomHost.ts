@@ -7,6 +7,7 @@ import type {
 } from "../protocol.js";
 import { installSchaetzoramaHostStyles } from "./schaetzoramaHostStyles.js";
 import { createSchaetzoramaSounds } from "./schaetzoramaSounds.js";
+import { numericComparison, renderAnswerComparison } from "./schaetzoramaAnswerComparison.js";
 import { itemMoveMs, itemStaggerMs, itemStartMs, renderVisualSolution, revealPosition, scoreStartMs, solutionItemCount, standingMovements } from "./schaetzoramaReveal.js";
 
 interface HostAppStateLike {
@@ -203,7 +204,7 @@ function renderReveal(state: HostAppStateLike, gameState: SchaetzoramaPublicStat
     ${renderHeader(state, gameState, `${text.categories[category]} · ${step + 1}/4`, text.correct, language)}
     <section class="sz-reveal__main">
       <div class="sz-reveal__question"><div class="sz-reveal__eyebrow"><span>${categoryGlyph(category)}</span>${escapeHtml(question.prompt)}</div><p>${text.correct}</p>${renderVisualSolution(question, solution, language, escapeHtml) ?? `<h1>${escapeHtml(formatAnswer(question, solution, language, true))}</h1>`}<small>${text.source}: ${escapeHtml(question.source.label)}</small></div>
-      <div class="sz-answer-board"><p>${text.closest}</p>${entries.map((entry, index) => `<div class="sz-answer-row" style="--player:${safeColor(entry.result.color)};--row-delay:${scoreStartMs(question) + index * 110}ms"><span class="sz-answer-row__rank">${index + 1}</span><strong>${escapeHtml(entry.result.name)}</strong><span>${escapeHtml(formatAnswer(question, entry.answer, language, false))}</span><em${entry.result.joker?.categoryId === category ? "" : " hidden"}>${text.copied}</em><b>+${entry.score}</b></div>`).join("")}</div>
+      ${question.kind === "rank" || question.kind === "assign" ? renderAnswerComparison(question, solution, entries.map((entry) => entry.result), language, escapeHtml) : `<div class="sz-answer-board"><p>${language === "en" ? "Players' estimates" : "Eure Schätzungen"}</p>${entries.map((entry, index) => `<div class="sz-answer-row" style="--player:${safeColor(entry.result.color)};--row-delay:${scoreStartMs(question) + index * 110}ms"><span class="sz-answer-row__rank">${index + 1}</span><strong>${escapeHtml(entry.result.name)}</strong><div>${numericComparison(question, entry.answer, solution, language, escapeHtml)}</div><em${entry.result.joker?.categoryId === category ? "" : " hidden"}>${text.copied}</em><b>+${entry.score}</b></div>`).join("")}</div>`}
     </section>
     <nav class="sz-reveal-steps">${categories.map((entry, index) => `<i class="is-${entry} ${index <= step ? "is-active" : ""}"></i>`).join("")}</nav>
   </main>`;

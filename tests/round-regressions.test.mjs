@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { serverGame } from "../dist/server/index.js";
-import { revealPosition, scoreStartMs, standingMovements } from "../dist/host/schaetzoramaReveal.js";
+import { revealPosition, categoryRevealDurationMs, standingMovements } from "../dist/host/schaetzoramaReveal.js";
 
 const players = ["a", "b"].map((id) => ({ id, name: id, color: "#336699", score: 0, isReady: false, connected: true }));
 const context = { roomCode: "TEST", roundNumber: 1, players, now: 1000, deltaMs: 0, language: "de", theme: "light", selectedGame: serverGame.manifest, previousRound: null, roomSettings: {} };
@@ -22,7 +22,7 @@ test("ten-round sessions shuffle once, preserve solutions, and never repeat ques
       const zones = questions.assign.terms.map((term) => ({ left: 0, both: 1, right: 2 })[questions.assign.answers[term.id]]);
       if (new Set(zones).size > 1) assert(zones.some((zone, index) => index > 0 && zone < zones[index - 1]));
       assert.deepEqual(serverGame.toPublicState(state, context).roundContent, serverGame.toPublicState(state, context).roundContent);
-      const revealDuration = Object.values(questions).reduce((total, question) => total + scoreStartMs(question) + 2600, 0);
+      const revealDuration = Object.values(questions).reduce((total, question) => total + categoryRevealDurationMs(question), 0);
       assert(revealDuration + 4000 + 5000 <= serverGame.manifest.phaseDurations.lockedMs);
       previousRound = { gameId: "schaetzorama", roundNumber, phase: "finished", state, updatedAt: context.now };
     }
@@ -69,7 +69,7 @@ test("standings calculate movement from pre-round scores with shared tie ranks",
   assert.deepEqual(movements.map(({ playerId, previousScore, previousRank, rank, shift }) => [playerId, previousScore, previousRank, rank, shift]), [["b", 50, 2, 1, 1], ["a", 100, 1, 2, -1], ["c", 50, 2, 2, 0]]);
   const state = serverGame.toPublicState(serverGame.createInitialState(context), context);
   state.revealedAt = 1000;
-  const categoriesEnd = Object.values(state.roundContent.questions).reduce((total, question) => total + scoreStartMs(question) + 2600, 1000);
+  const categoriesEnd = Object.values(state.roundContent.questions).reduce((total, question) => total + categoryRevealDurationMs(question), 1000);
   assert.equal(revealPosition(state, categoriesEnd).step, 4);
   assert.equal(revealPosition(state, categoriesEnd + 4000).step, 5);
 });

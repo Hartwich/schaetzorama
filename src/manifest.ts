@@ -15,8 +15,8 @@ export const schaetzoramaManifest = {
   phaseDurations: {
     roundIntroMs: 1_500,
     countdownMs: 2_000,
-    lockedMs: 38_000,
-    resultMs: 38_000,
+    lockedMs: 50_000,
+    resultMs: 50_000,
     scoreboardMs: 5_000
   },
 
