@@ -26,7 +26,7 @@ import { schaetzoramaManifest } from "../manifest.js";
 import { schaetzoramaEnglishTextByQuestionId, schaetzoramaRounds } from "./schaetzoramaContent.js";
 import { buildSchaetzoramaResults, schaetzoramaCategoryIds } from "./schaetzoramaScoring.js";
 
-const copyDurationMs = 35_000;
+import { answersVisibleMs, autoContinueDelayMs, revealCategories } from "../revealTiming.js";
 const roundsPerGame = 10;
 const startingInventory: SchaetzoramaJokerInventory = {
   copy: 2
@@ -240,7 +240,7 @@ function enterCopyStage(state: SchaetzoramaState, players: GamePlayerSummary[], 
     stage: "joker",
     answersByPlayerId,
     answerEndsAt: null,
-    jokerEndsAt: now + copyDurationMs,
+    jokerEndsAt: null,
     updatedAt: now,
     message: language === "en" ? "Copy phase: compare one answer, then keep yours or copy it." : "Abschreiben-Phase: Eine Antwort vergleichen, dann behalten oder abschreiben."
   };
@@ -257,6 +257,12 @@ function revealState(state: SchaetzoramaState, players: GamePlayerSummary[], now
     answerEndsAt: null,
     jokerEndsAt: null,
     revealedAt: now,
+    revealAnswersVisible: false,
+    revealStep: 0,
+    revealStepStartedAt: now,
+    revealReadyAt: now + answersVisibleMs(state.roundContent.questions.number, players.length),
+    revealAdvanceAt: null,
+    revealReadyByPlayerId: {},
     results: buildSchaetzoramaResults(players, state.roundContent.questions, state.answersByPlayerId, state.jokerByPlayerId),
     updatedAt: now,
     message: language === "en" ? "Reveal time! The truth hits the big screen." : "Auswertung! Jetzt wird die Wahrheit aufgedreht."
@@ -344,7 +350,7 @@ function localizeQuestion(question: SchaetzoramaPublicQuestion, language: Suppor
   return localized;
 }
 
-function toPublicSchaetzoramaState(state: SchaetzoramaState, players: GamePlayerSummary[], language: SupportedLanguage): SchaetzoramaPublicState {
+function toPublicSchaetzoramaState(state: SchaetzoramaState, players: GamePlayerSummary[], language: SupportedLanguage, now: number): SchaetzoramaPublicState {
   const numberQuestion = state.roundContent.questions.number as SchaetzoramaNumberQuestion;
   const percentQuestion = state.roundContent.questions.percent as SchaetzoramaNumberQuestion;
   const rankQuestion = state.roundContent.questions.rank as SchaetzoramaRankQuestion;
@@ -392,6 +398,14 @@ function toPublicSchaetzoramaState(state: SchaetzoramaState, players: GamePlayer
     answerEndsAt: state.answerEndsAt,
     jokerEndsAt: state.jokerEndsAt,
     revealedAt: state.revealedAt,
+    revealElapsedMs: Math.max(0, now - (state.revealStepStartedAt ?? now)),
+    revealAnswersVisible: state.revealAnswersVisible,
+    revealStep: state.revealStep,
+    revealStepStartedAt: state.revealStepStartedAt,
+    revealReadyAt: state.revealReadyAt,
+    revealAdvanceAt: state.revealAdvanceAt,
+    revealReadyByPlayerId: state.revealReadyByPlayerId,
+    autoContinueByPlayerId: state.autoContinueByPlayerId,
     solutions,
     results: state.stage === "revealed" ? state.results : [],
     standings: buildStandings(players, state)
@@ -496,6 +510,14 @@ function isSameJokerSelection(left: SchaetzoramaJokerSelection | undefined, righ
   );
 }
 
+function updateRevealGate(state: SchaetzoramaState, players: GamePlayerSummary[], now: number): SchaetzoramaState {
+  if (state.revealStep >= 4 || state.revealReadyAt === null) return state;
+  const visible = now >= state.revealReadyAt;
+  const ready = players.length > 0 && players.every((player) => state.autoContinueByPlayerId[player.id] || state.revealReadyByPlayerId[player.id]);
+  const advanceAt = ready ? state.revealAdvanceAt ?? Math.max(now, state.revealReadyAt) + autoContinueDelayMs : null;
+  return advanceAt === state.revealAdvanceAt && visible === state.revealAnswersVisible ? state : { ...state, revealAnswersVisible: visible, revealAdvanceAt: advanceAt, updatedAt: now };
+}
+
 export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, SchaetzoramaPublicState> = {
   manifest: schaetzoramaManifest,
   createInitialState(context) {
@@ -517,6 +539,13 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
       answerEndsAt: null,
       jokerEndsAt: null,
       revealedAt: null,
+      revealAnswersVisible: false,
+      revealStep: 0,
+      revealStepStartedAt: null,
+      revealReadyAt: null,
+      revealAdvanceAt: null,
+      revealReadyByPlayerId: {},
+      autoContinueByPlayerId: questionRound.roundContent.roundIndex === 1 ? {} : previousState?.autoContinueByPlayerId ?? {},
       results: []
     };
   },
@@ -531,6 +560,12 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
         answerEndsAt: null,
         jokerEndsAt: null,
         revealedAt: null,
+        revealAnswersVisible: false,
+        revealStep: 0,
+        revealStepStartedAt: null,
+        revealReadyAt: null,
+        revealAdvanceAt: null,
+        revealReadyByPlayerId: {},
         results: []
       },
       "playing",
@@ -542,8 +577,16 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
     );
   },
   handleInput(state, input, context) {
-    if (state.phase !== "playing") {
-      return state;
+    if (!context.players.some((player) => player.id === input.playerId)) return state;
+    if (input.type === "set_auto_continue" && state.stage === "revealed" && typeof input.enabled === "boolean") {
+      if (state.autoContinueByPlayerId[input.playerId] === input.enabled) return state;
+      const next = { ...state, autoContinueByPlayerId: { ...state.autoContinueByPlayerId, [input.playerId]: input.enabled }, updatedAt: context.now };
+      return state.phase === "playing" ? updateRevealGate(next, context.players, context.now) : next;
+    }
+    if (state.phase !== "playing") return state;
+    if (input.type === "reveal_ready" && state.stage === "revealed" && input.step === state.revealStep && state.revealStep < 4 && state.revealReadyAt !== null && context.now >= state.revealReadyAt) {
+      if (state.revealReadyByPlayerId[input.playerId]) return state;
+      return updateRevealGate({ ...state, revealReadyByPlayerId: { ...state.revealReadyByPlayerId, [input.playerId]: true }, updatedAt: context.now }, context.players, context.now);
     }
 
     if (input.type === "submit_answers" && state.stage === "answering") {
@@ -625,14 +668,23 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
       return state;
     }
 
-    if (state.stage === "joker" && state.jokerEndsAt !== null && context.now >= state.jokerEndsAt) {
-      return revealState(state, context.players, context.now, context.language);
+    if (state.stage === "answering" && allPlayersAnswered(state, context.players)) return enterCopyStage(state, context.players, context.now, context.language);
+    if (state.stage === "joker" && allPlayersHandledJoker(state, context.players)) return revealState(state, context.players, context.now, context.language);
+    if (state.stage === "revealed") {
+      const next = updateRevealGate(state, context.players, context.now);
+      if (next.revealAdvanceAt !== null && context.now >= next.revealAdvanceAt) {
+        const step = next.revealStep + 1;
+        return { ...next, revealAnswersVisible: false, revealStep: step, revealStepStartedAt: context.now,
+          revealReadyAt: step < 4 ? context.now + answersVisibleMs(next.roundContent.questions[revealCategories[step]], next.results.length) : null,
+          revealReadyByPlayerId: {}, revealAdvanceAt: step === 4 ? context.now + 4000 : step === 5 ? context.now + 5000 : null, updatedAt: context.now };
+      }
+      return next;
     }
 
     return state;
   },
   isRoundFinished(state) {
-    return state.stage === "revealed";
+    return state.stage === "revealed" && state.revealStep >= 6;
   },
   buildScore(state) {
     return state.results.map((result) => ({
@@ -642,10 +694,10 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
     }));
   },
   toPublicState(state, context) {
-    return toPublicSchaetzoramaState(state, context.players, context.language);
+    return toPublicSchaetzoramaState(state, context.players, context.language, context.now);
   },
   toControllerStateForPlayer(state, context, playerId) {
-    const publicState = toPublicSchaetzoramaState(state, context.players, context.language);
+    const publicState = toPublicSchaetzoramaState(state, context.players, context.language, context.now);
     const inventory = state.jokerInventoryByPlayerId[playerId] ?? startingInventory;
     const preview = state.jokerPreviewByPlayerId[playerId];
 

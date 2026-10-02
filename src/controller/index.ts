@@ -29,6 +29,14 @@ interface ReadyLayoutModel {
 }
 
 interface SchaetzoramaLayoutModel {
+  revealStep: number;
+  revealAnswersVisible: boolean;
+  ownRevealReady: boolean;
+  autoContinue: boolean;
+  onAutoReady: () => void;
+  onContinueReveal: () => void;
+  onSetAutoContinue: (enabled: boolean) => void;
+
   kind: "schaetzorama";
   currentPlayerId: string;
   title: string;
@@ -151,6 +159,13 @@ export function buildSchaetzoramaControllerModel(context: ControllerGameRenderCo
 
   return {
     kind: "schaetzorama",
+    revealStep: guessState?.revealStep ?? 0,
+    revealAnswersVisible: Boolean(guessState?.revealAnswersVisible),
+    ownRevealReady: Boolean(guessState?.revealReadyByPlayerId[playerId]),
+    autoContinue: Boolean(guessState?.autoContinueByPlayerId[playerId]),
+    onAutoReady: () => context.onSetReady?.(true),
+    onContinueReveal: () => onInput({ type: "reveal_ready", playerId, step: guessState?.revealStep ?? 0 }),
+    onSetAutoContinue: (enabled) => onInput({ type: "set_auto_continue", playerId, enabled }),
     currentPlayerId: playerId,
     title: "Schaetzorama",
     subtitle:
@@ -165,7 +180,7 @@ export function buildSchaetzoramaControllerModel(context: ControllerGameRenderCo
       stage === "revealed"
         ? guessState?.roundContent.roundIndex === 10
           ? en ? "Session complete. The final standings are on the host." : "Die Sitzung ist beendet. Die Gesamtwertung steht auf dem Host."
-          : en ? "The truth is out. Ready up when everyone is done watching." : "Die Wahrheit ist draussen. Gleich darfst du wieder bereit druecken."
+          : en ? "The truth is out. Ready up when everyone is done watching." : "Nach allen Antworten entscheiden alle gemeinsam, wann es weitergeht."
         : stage === "joker"
           ? guessState?.canSubmitJoker
             ? en ? "Choose one player and one task, compare both answers, then decide." : "Waehle Person und Aufgabe, vergleiche beide Antworten und entscheide dann."

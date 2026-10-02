@@ -11,8 +11,8 @@ a focused, one-question-at-a-time phone controller. A 10-round session contains
 40 distinct questions with no repeats and ends on an overall ranking. The sourced content contains 160 prompts;
 124 remain active after 36 arithmetic, definition-only, ambiguous, incorrectly
 typed, or semantically duplicated prompts were quarantined during review. The
-answer phase has no time limit. Calm selection music and a separate reveal track
-crossfade smoothly, with original host cues for each solution and score.
+answer and copying phases have no time limit. Copying waits for every player to decide. Calm selection music and a separate reveal track
+crossfade smoothly, with original synthesized cues for solutions, gauge movement, each player answer and points. Player answers appear 1.4 seconds apart with larger typography. Each result category waits for all phones to confirm Continue after the final answer is visible. An optional “Automatically continue and ready up” checkbox confirms each category and the next round for that player; mixed groups wait only for manual confirmations. This preference persists across rounds, and the final tenth round never starts another round.
 
 ## Run Through Open Party Lab
 

@@ -1,5 +1,5 @@
 import type { SchaetzoramaAnswer, SchaetzoramaCategoryId, SchaetzoramaPublicQuestion, SchaetzoramaPlayerRoundResult } from "../protocol.js";
-import { scoreStartMs } from "./schaetzoramaReveal.js";
+import { scoreStartMs, playerStaggerMs } from "./schaetzoramaReveal.js";
 
 type Escape = (value: unknown) => string;
 
@@ -25,7 +25,7 @@ export function renderAnswerComparison(question: SchaetzoramaPublicQuestion, sol
       ? question.terms.map((term) => ({ heading: term.label, correct: zoneLabel(solution.assignments[term.id]), choice: (answer: SchaetzoramaAnswer | undefined) => ({ label: zoneLabel(answer?.kind === "assign" ? answer.assignments[term.id] : undefined), correct: answer?.kind === "assign" && answer.assignments[term.id] === solution.assignments[term.id] }) }))
       : [];
   if (!columns.length) return "";
-  return `<div class="sz-comparison-wrap"><table class="sz-comparison"><caption>${en ? "Players' answers" : "Eure Antworten"}</caption><thead><tr><th scope="col">${en ? "Player" : "Spieler"}</th>${columns.map((column) => `<th scope="col">${escape(column.heading)}</th>`).join("")}<th scope="col">${en ? "Points" : "Punkte"}</th></tr><tr class="sz-comparison-solution"><th scope="row">${en ? "Solution" : "Lösung"}</th>${columns.map((column) => `<td>${escape(column.correct)}</td>`).join("")}<td></td></tr></thead><tbody>${results.map((result, index) => `<tr style="--row-delay:${scoreStartMs(question) + index * 110}ms"><th scope="row">${escape(result.name)}${result.joker?.categoryId === category ? `<small>${en ? "copied" : "kopiert"}</small>` : ""}</th>${columns.map((column) => {
+  return `<div class="sz-comparison-wrap"><table class="sz-comparison"><caption>${en ? "Players' answers" : "Eure Antworten"}</caption><thead><tr><th scope="col">${en ? "Player" : "Spieler"}</th>${columns.map((column) => `<th scope="col">${escape(column.heading)}</th>`).join("")}<th scope="col">${en ? "Points" : "Punkte"}</th></tr><tr class="sz-comparison-solution"><th scope="row">${en ? "Solution" : "Lösung"}</th>${columns.map((column) => `<td>${escape(column.correct)}</td>`).join("")}<td></td></tr></thead><tbody>${results.map((result, index) => `<tr style="--row-delay:${scoreStartMs(question) + index * playerStaggerMs}ms"><th scope="row">${escape(result.name)}${result.joker?.categoryId === category ? `<small>${en ? "copied" : "kopiert"}</small>` : ""}</th>${columns.map((column) => {
     const selected = column.choice(result.answers[category]);
     return `<td class="${selected.correct ? "is-correct" : "is-wrong"}"><span aria-label="${selected.correct ? (en ? "Correct" : "Richtig") : (en ? "Incorrect" : "Falsch")}">${selected.correct ? "✓" : "×"}</span> ${escape(selected.label)}</td>`;
   }).join("")}<td class="sz-comparison-points">+${result.categoryScores[category]}</td></tr>`).join("")}</tbody></table></div>`;

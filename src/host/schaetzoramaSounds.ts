@@ -20,23 +20,24 @@ export function createSchaetzoramaSounds() {
       if (muted) stop(); else unlock();
       try { localStorage.setItem("schaetzorama-effects-muted", String(muted)); } catch { /* Storage is optional. */ }
     },
-    play(kind: "reveal" | "land" | "points" | "final", index = 0) {
+    play(kind: "reveal" | "land" | "points" | "final" | "answer" | "sweep", index = 0) {
       if (muted || document.hidden || !context || context.state !== "running") return;
-      const notes = kind === "final" ? [0, 4, 7, 12] : kind === "reveal" ? [0, 7] : [index % 5 * 2];
+      const notes = kind === "final" ? [0, 4, 7, 12] : kind === "reveal" ? [0, 7] : kind === "answer" ? [index % 5 * 2, index % 5 * 2 + 7] : [index % 5 * 2];
       for (const [position, note] of notes.entries()) {
         const start = context.currentTime + position * .12;
         const oscillator = context.createOscillator();
         const gain = context.createGain();
-        oscillator.type = "sine";
+        oscillator.type = kind === "answer" ? "triangle" : "sine";
         oscillator.frequency.setValueAtTime(330 * 2 ** (note / 12), start);
+        if (kind === "sweep") oscillator.frequency.exponentialRampToValueAtTime(660, start + 1.3);
         if (kind === "land") oscillator.frequency.exponentialRampToValueAtTime(440 * 2 ** (note / 12), start + .08);
         gain.gain.setValueAtTime(0, start);
-        gain.gain.linearRampToValueAtTime(kind === "points" ? .035 : .045, start + .012);
-        gain.gain.exponentialRampToValueAtTime(.0001, start + .24);
+        gain.gain.linearRampToValueAtTime(kind === "points" ? .075 : .1, start + .012);
+        gain.gain.exponentialRampToValueAtTime(.0001, start + (kind === "sweep" ? 1.4 : .24));
         oscillator.connect(gain); gain.connect(context.destination);
         voices.add(oscillator);
         oscillator.onended = () => { voices.delete(oscillator); oscillator.disconnect(); gain.disconnect(); };
-        oscillator.start(start); oscillator.stop(start + .27);
+        oscillator.start(start); oscillator.stop(start + (kind === "sweep" ? 1.43 : .27));
       }
     },
     dispose() {

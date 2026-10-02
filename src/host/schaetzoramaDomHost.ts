@@ -8,11 +8,11 @@ import type {
 import { installSchaetzoramaHostStyles } from "./schaetzoramaHostStyles.js";
 import { createSchaetzoramaSounds } from "./schaetzoramaSounds.js";
 import { numericComparison, renderAnswerComparison } from "./schaetzoramaAnswerComparison.js";
-import { itemMoveMs, itemStaggerMs, itemStartMs, renderVisualSolution, revealPosition, scoreStartMs, solutionItemCount, standingMovements } from "./schaetzoramaReveal.js";
+import { playerStaggerMs, itemMoveMs, itemStaggerMs, itemStartMs, renderVisualSolution, revealPosition, scoreStartMs, solutionItemCount, standingMovements } from "./schaetzoramaReveal.js";
 
 interface HostAppStateLike {
   game?: { phase?: string; state?: unknown } | null;
-  room?: { code?: string; language?: "de" | "en"; lifecycle?: string } | null;
+  room?: { code?: string; language?: "de" | "en"; lifecycle?: string; pausedBy?: unknown } | null;
 }
 
 const categories: SchaetzoramaCategoryId[] = ["number", "percent", "rank", "assign"];
@@ -42,9 +42,7 @@ export function mountSchaetzoramaHost(rootInput: unknown, source: HostGameStateS
   const root = rootInput as HTMLElement;
   installSchaetzoramaHostStyles();
   root.className = "sz-host-mount";
-  let revealTimer: number | undefined;
-  let ticker: number | undefined;
-  let lastMarkup = "";
+  let viewKey = "";
   const sounds = createSchaetzoramaSounds();
   let cueKey = "";
   let cueTimers: number[] = [];
@@ -60,33 +58,35 @@ export function mountSchaetzoramaHost(rootInput: unknown, source: HostGameStateS
   root.addEventListener("click", onClick);
   const clearCues = () => { cueTimers.forEach(window.clearTimeout); cueTimers = []; };
 
-  const clearTimers = () => {
-    if (revealTimer !== undefined) window.clearTimeout(revealTimer);
-    if (ticker !== undefined) window.clearTimeout(ticker);
-    revealTimer = undefined;
-    ticker = undefined;
-  };
-
   const render = (stateInput: unknown) => {
-    clearTimers();
     const state = stateInput as HostAppStateLike;
     const language = state.room?.language === "en" ? "en" : "de";
     const gameState = state.game?.state as SchaetzoramaPublicState | undefined;
     const phase = state.game?.phase ?? state.room?.lifecycle ?? "";
+    const intro = !gameState || phase === "round_intro" || phase === "countdown";
+    const nextViewKey = language + ":" + (gameState?.roundContent.roundIndex ?? 0) + ":" + (intro ? "intro" : gameState.stage === "revealed" ? "reveal:" + Math.min(5, gameState.revealStep) : "play");
     const markup = renderHost(state, gameState, phase, language);
-    if (markup !== lastMarkup) {
+    if (viewKey !== nextViewKey) {
+      root.style.setProperty("--reveal-age", (gameState?.revealElapsedMs ?? 0) + "ms");
       root.innerHTML = markup;
-      lastMarkup = markup;
-      syncSoundButton();
-      if (gameState?.stage === "revealed") {
-        const position = revealPosition(gameState);
-        root.style.setProperty("--reveal-age", `${position.elapsed}ms`);
+      viewKey = nextViewKey;
+    } else {
+      // Keep questions and animated results mounted when readiness changes.
+      const template = document.createElement("template");
+      template.innerHTML = markup;
+      for (const selector of [".sz-host-header", ".sz-score-rail", ".sz-reveal-ready"]) {
+        const current = root.querySelector(selector);
+        const next = template.content.querySelector(selector);
+        if (current && next && current.outerHTML !== next.outerHTML) current.replaceWith(next);
       }
     }
-
-    if (gameState?.stage === "revealed" && gameState.revealedAt) {
-      const { step, elapsed, remaining } = revealPosition(gameState);
-      const nextCueKey = `${gameState.revealedAt}:${step}`;
+    syncSoundButton();
+    const paused = Boolean(state.room?.pausedBy);
+    root.classList.toggle("sz-is-paused", paused);
+    if (paused) { clearCues(); cueKey = ""; return; }
+    if (gameState?.stage === "revealed") {
+      const { step, elapsed } = revealPosition(gameState);
+      const nextCueKey = gameState.revealedAt + ":" + step;
       if (cueKey !== nextCueKey) {
         clearCues(); cueKey = nextCueKey;
         const schedule = (at: number, kind: Parameters<typeof sounds.play>[0], index = 0) => {
@@ -96,20 +96,24 @@ export function mountSchaetzoramaHost(rootInput: unknown, source: HostGameStateS
         if (step < categories.length) {
           const question = gameState.roundContent.questions[categories[step]];
           schedule(0, "reveal");
+          if (question.kind === "number" || question.kind === "percent") schedule(itemStartMs, "sweep");
           for (let index = 0; index < solutionItemCount(question); index++) schedule(itemStartMs + index * itemStaggerMs + itemMoveMs, "land", index);
-          gameState.results.forEach((_, index) => schedule(scoreStartMs(question) + index * 110, "points", index));
-        } else if (step === categories.length) schedule(0, "final");
-        else schedule(1200, "points");
+          gameState.results.forEach((_, index) => {
+            schedule(scoreStartMs(question) + index * playerStaggerMs, "answer", index);
+            schedule(scoreStartMs(question) + index * playerStaggerMs + 280, "points", index);
+            const at = scoreStartMs(question) + index * playerStaggerMs;
+            if (at >= elapsed - 150) cueTimers.push(window.setTimeout(() => {
+              const row = root.querySelectorAll<HTMLElement>(".sz-answer-row, .sz-comparison tbody tr")[index];
+              const board = root.querySelector<HTMLElement>(".sz-answer-board, .sz-comparison-wrap");
+              if (row && board) {
+                const below = row.getBoundingClientRect().bottom - board.getBoundingClientRect().bottom;
+                if (below > 0) board.scrollBy({ top: below + 8, behavior: "smooth" });
+              }
+            }, Math.max(0, at - elapsed)));
+          });
+        } else if (step === categories.length) { schedule(0, "final"); schedule(1200, "points"); }
       }
-      if (remaining > 0) {
-        revealTimer = window.setTimeout(() => render(source.getState()), Math.max(30, remaining));
-      }
-    } else if (gameState?.stage === "joker" && gameState.jokerEndsAt) {
-      clearCues(); cueKey = "";
-      ticker = window.setTimeout(() => render(source.getState()), 1_000);
-    } else {
-      clearCues(); cueKey = "";
-    }
+    } else { clearCues(); cueKey = ""; }
   };
 
   const unsubscribe = source.subscribe(render);
@@ -117,7 +121,6 @@ export function mountSchaetzoramaHost(rootInput: unknown, source: HostGameStateS
   if (initial) render(initial);
 
   return () => {
-    clearTimers();
     clearCues();
     sounds.dispose();
     root.removeEventListener("click", onClick);
@@ -203,11 +206,24 @@ function renderReveal(state: HostAppStateLike, gameState: SchaetzoramaPublicStat
   return `<main class="sz-host sz-reveal is-${category}">
     ${renderHeader(state, gameState, `${text.categories[category]} · ${step + 1}/4`, text.correct, language)}
     <section class="sz-reveal__main">
-      <div class="sz-reveal__question"><div class="sz-reveal__eyebrow"><span>${categoryGlyph(category)}</span>${escapeHtml(question.prompt)}</div><p>${text.correct}</p>${renderVisualSolution(question, solution, language, escapeHtml) ?? `<h1>${escapeHtml(formatAnswer(question, solution, language, true))}</h1>`}<small>${text.source}: ${escapeHtml(question.source.label)}</small></div>
-      ${question.kind === "rank" || question.kind === "assign" ? renderAnswerComparison(question, solution, entries.map((entry) => entry.result), language, escapeHtml) : `<div class="sz-answer-board"><p>${language === "en" ? "Players' estimates" : "Eure Schätzungen"}</p>${entries.map((entry, index) => `<div class="sz-answer-row" style="--player:${safeColor(entry.result.color)};--row-delay:${scoreStartMs(question) + index * 110}ms"><span class="sz-answer-row__rank">${index + 1}</span><strong>${escapeHtml(entry.result.name)}</strong><div>${numericComparison(question, entry.answer, solution, language, escapeHtml)}</div><em${entry.result.joker?.categoryId === category ? "" : " hidden"}>${text.copied}</em><b>+${entry.score}</b></div>`).join("")}</div>`}
+      <div class="sz-reveal__question"><div class="sz-reveal__eyebrow"><span>${categoryGlyph(category)}</span>${escapeHtml(question.prompt)}</div><p>${text.correct}</p>${renderVisualSolution(question, solution, language, escapeHtml) ?? renderNumericGauge(question, solution) + `<h1>${escapeHtml(formatAnswer(question, solution, language, true))}</h1>`}<small>${text.source}: ${escapeHtml(question.source.label)}</small></div>
+      ${question.kind === "rank" || question.kind === "assign" ? renderAnswerComparison(question, solution, entries.map((entry) => entry.result), language, escapeHtml) : `<div class="sz-answer-board"><p>${language === "en" ? "Players' estimates" : "Eure Schätzungen"}</p>${entries.map((entry, index) => `<div class="sz-answer-row" style="--player:${safeColor(entry.result.color)};--row-delay:${scoreStartMs(question) + index * playerStaggerMs}ms"><span class="sz-answer-row__rank">${index + 1}</span><strong>${escapeHtml(entry.result.name)}</strong><div>${numericComparison(question, entry.answer, solution, language, escapeHtml)}</div><em${entry.result.joker?.categoryId === category ? "" : " hidden"}>${text.copied}</em><b>+${entry.score}</b></div>`).join("")}</div>`}
     </section>
+    <div class="sz-reveal-ready" role="status">${renderRevealReadiness(gameState, language)}</div>
     <nav class="sz-reveal-steps">${categories.map((entry, index) => `<i class="is-${entry} ${index <= step ? "is-active" : ""}"></i>`).join("")}</nav>
   </main>`;
+}
+
+function renderRevealReadiness(state: SchaetzoramaPublicState, language: "de" | "en"): string {
+  if (!state.revealAnswersVisible) return language === "en" ? "Revealing answers…" : "Antworten werden aufgedeckt …";
+  const count = state.progress.filter((player) => state.autoContinueByPlayerId[player.playerId] || state.revealReadyByPlayerId[player.playerId]).length;
+  return count + "/" + state.progress.length + (language === "en" ? " ready · Continue on your phone" : " bereit · Weiter auf dem Handy");
+}
+
+function renderNumericGauge(question: SchaetzoramaPublicQuestion, solution: SchaetzoramaAnswer | undefined): string {
+  if ((question.kind !== "number" && question.kind !== "percent") || solution?.kind !== "number") return "";
+  const fraction = Math.max(0, Math.min(1, (solution.value - question.min) / Math.max(1, question.max - question.min)));
+  return '<div class="sz-gauge" aria-hidden="true" style="--needle-angle:' + (-90 + fraction * 180) + 'deg"><div class="sz-gauge-arc"></div><i class="sz-gauge-needle"></i><b class="sz-gauge-hub"></b><span class="sz-gauge-min">' + question.min + '</span><span class="sz-gauge-max">' + question.max + '</span></div>';
 }
 
 function renderFinal(state: HostAppStateLike, gameState: SchaetzoramaPublicState, language: "de" | "en"): string {

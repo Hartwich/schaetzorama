@@ -1,31 +1,10 @@
 import type { SchaetzoramaAnswer, SchaetzoramaPublicQuestion, SchaetzoramaPublicState, SchaetzoramaStanding } from "../protocol.js";
 
-export const revealCategories = ["number", "percent", "rank", "assign"] as const;
-export const itemStartMs = 650;
-export const itemStaggerMs = 600;
-export const itemMoveMs = 700;
+export { revealCategories, itemStartMs, itemStaggerMs, itemMoveMs, playerStaggerMs, scoreStartMs, solutionItemCount } from "../revealTiming.js";
+import { itemStartMs, itemStaggerMs } from "../revealTiming.js";
 
-export function solutionItemCount(question: SchaetzoramaPublicQuestion): number {
-  return question.kind === "rank" ? question.items.length : question.kind === "assign" ? question.terms.length : 1;
-}
-
-export function scoreStartMs(question: SchaetzoramaPublicQuestion): number {
-  return itemStartMs + (solutionItemCount(question) - 1) * itemStaggerMs + itemMoveMs + 250;
-}
-
-export function revealPosition(state: SchaetzoramaPublicState, now = Date.now()) {
-  let elapsed = Math.max(0, now - (state.revealedAt ?? now));
-  for (let step = 0; step < revealCategories.length; step++) {
-    const duration = categoryRevealDurationMs(state.roundContent.questions[revealCategories[step]]);
-    if (elapsed < duration) return { step, elapsed, remaining: duration - elapsed };
-    elapsed -= duration;
-  }
-  if (elapsed < 4000) return { step: revealCategories.length, elapsed, remaining: 4000 - elapsed };
-  return { step: revealCategories.length + 1, elapsed: elapsed - 4000, remaining: 0 };
-}
-
-export function categoryRevealDurationMs(question: SchaetzoramaPublicQuestion): number {
-  return scoreStartMs(question) + (question.kind === "rank" || question.kind === "assign" ? 6500 : 4000);
+export function revealPosition(state: SchaetzoramaPublicState) {
+  return { step: state.revealStep, elapsed: state.revealElapsedMs, remaining: 0 };
 }
 
 export function standingMovements(standings: SchaetzoramaStanding[]) {

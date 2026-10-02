@@ -132,6 +132,13 @@ export interface SchaetzoramaState extends BaseRoundState {
   answerEndsAt: number | null;
   jokerEndsAt: number | null;
   revealedAt: number | null;
+  revealAnswersVisible: boolean;
+  revealStep: number;
+  revealStepStartedAt: number | null;
+  revealReadyAt: number | null;
+  revealAdvanceAt: number | null;
+  revealReadyByPlayerId: Record<string, boolean>;
+  autoContinueByPlayerId: Record<string, boolean>;
   results: SchaetzoramaPlayerRoundResult[];
 }
 
@@ -144,12 +151,20 @@ export interface SchaetzoramaPlayerProgress {
 }
 
 export interface SchaetzoramaPublicState {
+  revealElapsedMs: number;
   stage: SchaetzoramaStage;
   roundContent: SchaetzoramaRoundContent<SchaetzoramaPublicQuestion>;
   progress: SchaetzoramaPlayerProgress[];
   answerEndsAt: number | null;
   jokerEndsAt: number | null;
   revealedAt: number | null;
+  revealAnswersVisible: boolean;
+  revealStep: number;
+  revealStepStartedAt: number | null;
+  revealReadyAt: number | null;
+  revealAdvanceAt: number | null;
+  revealReadyByPlayerId: Record<string, boolean>;
+  autoContinueByPlayerId: Record<string, boolean>;
   solutions: SchaetzoramaAnswerSet;
   results: SchaetzoramaPlayerRoundResult[];
   standings: SchaetzoramaStanding[];
@@ -171,6 +186,8 @@ export interface SchaetzoramaControllerState extends SchaetzoramaPublicState {
 }
 
 export type SchaetzoramaInput =
+  | (PlayerInput & { type: "reveal_ready"; step: number })
+  | (PlayerInput & { type: "set_auto_continue"; enabled: boolean })
   | (PlayerInput & {
       type: "submit_answers";
       answers: SchaetzoramaAnswerSet;
