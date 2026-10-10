@@ -8,9 +8,13 @@ Colorful estimation quiz for Open Party Lab with numeric, ranking, and assignmen
 
 Beta. The game uses a resolution-independent DOM host with animated reveals and
 a focused, one-question-at-a-time phone controller. A 10-round session contains
-40 distinct questions with no repeats and ends on an overall ranking. The sourced content contains 160 prompts;
-124 remain active after 36 arithmetic, definition-only, ambiguous, incorrectly
-typed, or semantically duplicated prompts were quarantined during review. The
+40 distinct questions with no repeats and ends on an overall ranking. The active
+pool contains 147 prompts: 87 reviewed numeric, percentage and ranking questions,
+plus 60 bilingual assignment tasks. Every assignment contains left-only,
+right-only and overlapping examples, with varying overlap counts. The old 40
+assignment tasks remain archived in the original data but are no longer selected.
+Fresh numeric and percentage answers start at zero; all their ranges include zero.
+Submitted answers are preserved when reconnecting. See [assignment review](docs/assignment-review.md). The
 answer and copying phases have no time limit. Copying waits for every player to decide. Calm selection music and a separate reveal track
 crossfade smoothly, with original synthesized cues for solutions, gauge movement, each player answer and points. Player answers appear 1.4 seconds apart with larger typography. Each result category waits for all phones to confirm Continue after the final answer is visible. An optional “Automatically continue and ready up” checkbox confirms each category and the next round for that player; mixed groups wait only for manual confirmations. This preference persists across rounds, and the final tenth round never starts another round.
 
@@ -66,6 +70,7 @@ The Platform should import only these public entrypoints.
 npm install
 npm run typecheck
 npm run build
+npm test
 npm run pack:dry-run
 ```
 

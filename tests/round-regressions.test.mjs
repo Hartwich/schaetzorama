@@ -1,10 +1,26 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { serverGame } from "../dist/server/index.js";
+import { schaetzoramaRounds } from "../dist/server/schaetzoramaContent.js";
+import { scoreSchaetzoramaAnswer } from "../dist/server/schaetzoramaScoring.js";
 import { revealPosition, standingMovements } from "../dist/host/schaetzoramaReveal.js";
 
 const players = ["a", "b"].map((id) => ({ id, name: id, color: "#336699", score: 0, isReady: false, connected: true }));
 const context = { roomCode: "TEST", roundNumber: 1, players, now: 1000, deltaMs: 0, language: "de", theme: "light", selectedGame: serverGame.manifest, previousRound: null, roomSettings: {} };
+
+test("zero is accepted for year estimates without widening their scoring tolerance", () => {
+  const original = schaetzoramaRounds.find((round) => round.questions.number.id === "transistor-invention-year").questions.number;
+  let state = serverGame.startRound(serverGame.createInitialState(context), context);
+  state = { ...state, roundContent: { ...state.roundContent, questions: { ...state.roundContent.questions, number: original } } };
+  assert.equal(state.roundContent.questions.number.min, 1800);
+  const phone = serverGame.toControllerStateForPlayer(state, context, "a");
+  assert.equal(phone.roundContent.questions.number.min, 0);
+  assert(!("answer" in phone.roundContent.questions.number));
+  state = serverGame.handleInput(state, { type: "submit_answers", playerId: "a", answers: { number: { kind: "number", value: 0 } } }, context);
+  assert.equal(serverGame.toControllerStateForPlayer(state, context, "a").ownAnswers.number.value, 0);
+  assert.equal(scoreSchaetzoramaAnswer(original, { kind: "number", value: 1900 }), 0);
+  assert.equal(scoreSchaetzoramaAnswer(original, { kind: "number", value: 1947 }), 5);
+});
 
 test("ten-round sessions shuffle once, preserve solutions, and never repeat questions", () => {
   for (let session = 0; session < 30; session++) {
@@ -13,6 +29,10 @@ test("ten-round sessions shuffle once, preserve solutions, and never repeat ques
     for (let roundNumber = 1; roundNumber <= 10; roundNumber++) {
       const state = serverGame.createInitialState({ ...context, roundNumber, previousRound });
       const questions = state.roundContent.questions;
+      const publicQuestions = serverGame.toPublicState(state, context).roundContent.questions;
+      assert.equal(publicQuestions.number.min, 0);
+      assert.equal(publicQuestions.percent.min, 0);
+      assert.match(questions.assign.id, /^overlap-/);
       for (const question of Object.values(questions)) {
         assert(!seen.has(question.id));
         seen.add(question.id);
@@ -33,7 +53,8 @@ test("the second paid preview is readable at zero inventory and remains copyable
   for (let roundNumber = 1; roundNumber <= 2; roundNumber++) {
     const ctx = { ...context, roundNumber, previousRound };
     let state = serverGame.startRound(serverGame.createInitialState(ctx), ctx);
-    const numberValue = state.roundContent.questions.number.min;
+    const numberValue = 0;
+    assert.equal(numberValue, 0);
     for (const player of players) state = serverGame.handleInput(state, { type: "submit_answers", playerId: player.id, answers: { number: { kind: "number", value: numberValue } } }, ctx);
     assert.equal(state.stage, "joker");
     const joker = { kind: "copy", categoryId: "number", targetPlayerId: "b" };

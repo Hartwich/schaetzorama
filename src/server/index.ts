@@ -24,6 +24,7 @@ import type {
 } from "../protocol.js";
 import { schaetzoramaManifest } from "../manifest.js";
 import { schaetzoramaEnglishTextByQuestionId, schaetzoramaRounds } from "./schaetzoramaContent.js";
+import { schaetzoramaAssignments } from "./schaetzoramaAssignments.js";
 import { buildSchaetzoramaResults, schaetzoramaCategoryIds } from "./schaetzoramaScoring.js";
 
 import { answersVisibleMs, autoContinueDelayMs, revealCategories } from "../revealTiming.js";
@@ -87,7 +88,7 @@ function createEmptyUsedQuestionIdsByCategory(): UsedQuestionIdsByCategory {
 const selectableQuestionsByCategory = Object.fromEntries(
   schaetzoramaCategoryIds.map((categoryId) => [
     categoryId,
-    schaetzoramaRounds
+    categoryId === "assign" ? schaetzoramaAssignments : schaetzoramaRounds
       .map((round) => round.questions[categoryId])
       .filter((question) => !excludedQuestionIds.has(question.id))
   ])
@@ -294,7 +295,8 @@ function buildStandings(players: GamePlayerSummary[], state: SchaetzoramaState) 
 function stripQuestion(question: SchaetzoramaQuestion): SchaetzoramaPublicQuestion {
   if ("answer" in question) {
     const { answer: _answer, ...publicQuestion } = question;
-    return publicQuestion;
+    // Keep the authored scoring span private while allowing every estimate to start at zero.
+    return { ...publicQuestion, min: Math.min(0, question.min) };
   }
 
   if ("answerOrder" in question) {
@@ -429,7 +431,7 @@ function sanitizeAnswers(answers: SchaetzoramaAnswerSet, questions: Record<strin
       }
       nextAnswers[categoryId] = {
         kind: "number",
-        value: Math.round(Math.max(question.min, Math.min(question.max, answer.value)))
+        value: Math.round(Math.max(Math.min(0, question.min), Math.min(question.max, answer.value)))
       };
       continue;
     }
