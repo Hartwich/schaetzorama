@@ -177,7 +177,7 @@ function questionRoundFor(
   return {
     roundContent: {
       roundIndex: visibleRound,
-      roundLabel: language === "en" ? `Schaetzorama Round ${visibleRound}/10` : `Schaetzorama Runde ${visibleRound}/10`,
+      roundLabel: language === "en" ? `Guess-o-Rama Round ${visibleRound}/10` : `Schaetzorama Runde ${visibleRound}/10`,
       questions
     },
     usedQuestionIdsByCategory: Object.fromEntries(
@@ -529,7 +529,7 @@ export const serverGame: ServerGame<SchaetzoramaState, SchaetzoramaInput, Schaet
     return {
       ...createBaseRoundState("round_intro", context.now, {
         durationMs: roundPhaseDurations.roundIntroMs,
-        message: context.language === "en" ? "Schaetzorama is warming up the sliders." : "Schaetzorama faehrt die Regler hoch."
+        message: context.language === "en" ? "Guess-o-Rama is warming up the sliders." : "Schaetzorama faehrt die Regler hoch."
       }),
       stage: "answering",
       roundContent: questionRound.roundContent,

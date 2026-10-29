@@ -167,7 +167,7 @@ export function buildSchaetzoramaControllerModel(context: ControllerGameRenderCo
     onContinueReveal: () => onInput({ type: "reveal_ready", playerId, step: guessState?.revealStep ?? 0 }),
     onSetAutoContinue: (enabled) => onInput({ type: "set_auto_continue", playerId, enabled }),
     currentPlayerId: playerId,
-    title: "Schaetzorama",
+    title: en ? "Guess-o-Rama" : "Schaetzorama",
     subtitle:
       stage === "revealed"
         ? en ? "Results" : "Auswertung"

@@ -33,7 +33,7 @@ const labels = {
     intro: "Four tasks. Trust your instincts.", source: "Source", correct: "Correct answer",
     closest: "Best score", copied: "copied", points: "points", roundPoints: "round points",
     finalTitle: "Round complete", finalSubtitle: "Points from all four tasks are now on the board.",
-    sessionTitle: "Schaetzorama complete", sessionSubtitle: "Final standings after ten rounds.", totalPoints: "total points",
+    sessionTitle: "Guess-o-Rama complete", sessionSubtitle: "Final standings after ten rounds.", totalPoints: "total points",
     categories: { number: "Number", percent: "Percent", rank: "Order", assign: "Assign" }
   }
 } as const;
@@ -142,8 +142,8 @@ function renderIntro(state: HostAppStateLike, gameState: SchaetzoramaPublicState
   return `<main class="sz-host sz-intro">
     <div class="sz-intro__bands" aria-hidden="true">${categories.map((category, index) => `<span class="is-${category}" style="--delay:${index * 90}ms"></span>`).join("")}</div>
     <section class="sz-intro__content">
-      <p class="sz-kicker">${escapeHtml(gameState?.roundContent.roundLabel ?? "Schaetzorama")}</p>
-      <h1>Schaetzorama</h1><p>${text.intro}</p>
+      <p class="sz-kicker">${escapeHtml(gameState?.roundContent.roundLabel ?? (language === "en" ? "Guess-o-Rama" : "Schaetzorama"))}</p>
+      <h1>${language === "en" ? "Guess-o-Rama" : "Schaetzorama"}</h1><p>${text.intro}</p>
       <div class="sz-intro__legend">${categories.map((category) => `<span class="is-${category}">${categoryGlyph(category)} ${text.categories[category]}</span>`).join("")}</div>
     </section>
     <p class="sz-room-code">${text.room} <strong>${escapeHtml(state.room?.code ?? "----")}</strong></p>
@@ -175,7 +175,7 @@ function renderPlay(state: HostAppStateLike, gameState: SchaetzoramaPublicState,
 function renderHeader(state: HostAppStateLike, gameState: SchaetzoramaPublicState, stage: string, meta: string, language: "de" | "en"): string {
   const text = labels[language];
   return `<header class="sz-host-header">
-    <div class="sz-brand"><strong>Schaetzorama</strong><span>${text.brandLine}</span></div>
+    <div class="sz-brand"><strong>${language === "en" ? "Guess-o-Rama" : "Schaetzorama"}</strong><span>${text.brandLine}</span></div>
     <div class="sz-round"><span>${escapeHtml(gameState.roundContent.roundLabel)}</span><strong>${escapeHtml(stage)}</strong></div>
     <div class="sz-live-meta"><div class="sz-meta-actions"><span>${escapeHtml(meta)}</span><button type="button" data-sz-sound aria-label="${language === "en" ? "Sound effects" : "Soundeffekte"}" title="${language === "en" ? "Sound effects on/off" : "Soundeffekte an/aus"}" aria-pressed="true">♪</button></div><b>${text.room} ${escapeHtml(state.room?.code ?? "----")}</b></div>
   </header>`;

@@ -1,3 +1,4 @@
+import { additionalEnglishText } from "./additionalEnglishText.js";
 ﻿import type { SchaetzoramaRoundContent } from "../protocol.js";
 
 import { schaetzoramaAssignmentEnglishText } from "./schaetzoramaAssignments.js";
@@ -3378,6 +3379,7 @@ export interface SchaetzoramaEnglishQuestionText {
 }
 
 export const schaetzoramaEnglishTextByQuestionId: Record<string, SchaetzoramaEnglishQuestionText> = {
+  ...additionalEnglishText,
   ...schaetzoramaAssignmentEnglishText,
   "de-bundeslaender": {
     title: "From 0 to 50",

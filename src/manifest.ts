@@ -1,7 +1,9 @@
+import { schaetzoramaText } from "./catalogText.js";
 import type { GameManifest } from "@open-party-lab/game-core";
 
 export const schaetzoramaManifest = {
   id: "schaetzorama",
+  translations: schaetzoramaText,
   displayName: "Schaetzorama",
   description: "Schaetzen, sortieren und abschreiben auf einer quietschbunten Quiz-Konsole.",
   minPlayers: 1,
