@@ -114,6 +114,14 @@ const css = `
 .sz-reveal__question h1{font-size:clamp(42px,4.4vw,68px);text-align:center;animation-delay:calc(2050ms - var(--reveal-age,0ms))}
 @keyframes sz-needle-sweep{from{transform:rotate(-90deg)}to{transform:rotate(var(--needle-angle))}}
 .sz-is-paused .sz-host *{animation-play-state:paused!important}
+/* Keep every player reachable in large groups, including short host viewports. */
+.sz-progress-list{min-height:0;max-height:35vh;overflow:auto}
+.sz-standings{min-height:0;overflow:auto}
+.sz-standings>div>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sz-final{display:flex;flex-direction:column}
+.sz-final__title{flex-shrink:0}
+.sz-final-board,.sz-movement-board{min-height:0;overflow:auto;flex:1;align-content:start}
+.sz-final-row>strong{min-width:0;overflow-wrap:anywhere}
 @media(max-height:740px){.sz-gauge{height:155px;width:280px;margin-top:16px}.sz-reveal .sz-answer-row{padding:9px 12px}.sz-reveal__question>p{margin-top:22px}.sz-reveal__question h1{font-size:44px}}
 @media(max-width:1040px){.sz-reveal .sz-answer-row{grid-template-columns:20px minmax(65px,.7fr) minmax(90px,1fr) auto 48px;gap:7px}.sz-numeric-answer strong{font-size:26px}.sz-answer-row>strong{font-size:18px}}
 @media (prefers-reduced-motion:reduce){.sz-host *{animation-duration:.01ms!important;animation-delay:0ms!important}}

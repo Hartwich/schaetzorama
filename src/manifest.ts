@@ -7,7 +7,7 @@ export const schaetzoramaManifest = {
   displayName: "Schaetzorama",
   description: "Schaetzen, sortieren und abschreiben auf einer quietschbunten Quiz-Konsole.",
   minPlayers: 1,
-  maxPlayers: 8,
+  maxPlayers: 16,
   hostView: "SchaetzoramaHostScene",
   controllerView: "schaetzorama",
   controllerLayout: "schaetzorama",

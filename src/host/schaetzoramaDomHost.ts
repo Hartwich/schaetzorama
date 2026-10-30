@@ -191,7 +191,7 @@ function renderQuestionCard(question: SchaetzoramaPublicQuestion, language: "de"
 
 function renderStandings(gameState: SchaetzoramaPublicState, language: "de" | "en"): string {
   const text = labels[language];
-  return `<div class="sz-standings"><p>${text.roundPoints}</p>${gameState.standings.slice(0, 6).map((standing, index) => `<div><span><b>${index + 1}</b>${escapeHtml(standing.name)}</span><strong>${standing.projectedScore}</strong></div>`).join("")}</div>`;
+  return `<div class="sz-standings"><p>${text.roundPoints}</p>${gameState.standings.map((standing, index) => `<div><span><b>${index + 1}</b>${escapeHtml(standing.name)}</span><strong>${standing.projectedScore}</strong></div>`).join("")}</div>`;
 }
 
 function renderReveal(state: HostAppStateLike, gameState: SchaetzoramaPublicState, language: "de" | "en"): string {

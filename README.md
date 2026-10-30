@@ -1,5 +1,8 @@
 # Schaetzorama
 
+Supports 1–16 players. Host progress and standings scroll when needed so all
+players remain accessible in large groups.
+
 Colorful estimation quiz for Open Party Lab with numeric, ranking, and assignment questions.
 
 ![In-game screenshot](docs/screenshots/host.png)
